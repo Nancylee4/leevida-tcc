@@ -1,0 +1,59 @@
+@startuml
+!include skin.iuml
+autonumber
+hide footbox
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 210
+
+actor "Enfermeiro" as E
+boundary ":Aplicação Web\n(React)" as UI
+control ":AiController" as AC
+control ":AiService" as AI
+participant ":GeminiClient" as GC
+control ":ConsultationsService" as CS
+database ":PostgreSQL" as DB
+actor "Médico" as M
+
+E -> UI : registar sinais vitais e sintomas
+activate UI
+E -> UI : Sugerir com IA
+UI -> AC : POST /ai/triage-priority (JWT)
+activate AC
+AC -> AC : verificar perfil (ENFERMEIRO)\ne limite de 20 pedidos/min
+AC -> AI : triagePriority(dados)
+activate AI
+AI -> AI : piso = triageFloor(sinais vitais)
+AI -> DB : ler idade, sexo e alergias
+alt serviço de IA disponível
+  AI -> GC : generateJson(dados anonimizados)
+  activate GC
+  loop para cada modelo da cadeia de reserva, até obter resposta
+    GC -> GC : chamar modelo (timeout 25 s)
+  end
+  GC --> AI : cor, justificação, sinais de alarme
+  deactivate GC
+  AI -> AI : prioridade = mais urgente(IA, piso)
+else IA indisponível
+  AI -> AI : prioridade = piso (só regras)
+end
+AI -> DB : registar AuditLog (IA_SUGERIU_PRIORIDADE)
+AI --> AC : sugestão
+deactivate AI
+AC --> UI : 200 {priority, reason, redFlags, source}
+deactivate AC
+UI --> E : cor pré-seleccionada e justificação
+
+E -> UI : confirmar ou alterar a cor e gravar
+UI -> CS : POST /consultations/triage
+activate CS
+CS -> DB : criar Consultation (AGUARDANDO)\ne VitalSigns
+CS -> DB : registar AuditLog
+CS -> DB : criar Notification para o perfil MEDICO
+opt prioridade VERMELHO ou LARANJA
+  CS ->> M : aviso em tempo real (SSE):\natendimento prioritário
+end
+CS --> UI : 201 Consultation
+deactivate CS
+UI --> E : triagem registada
+deactivate UI
+@enduml

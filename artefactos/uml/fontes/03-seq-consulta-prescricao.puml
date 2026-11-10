@@ -1,0 +1,83 @@
+@startuml
+!include skin.iuml
+autonumber
+hide footbox
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 200
+
+actor "Médico" as M
+boundary ":Aplicação Web\n(React)" as UI
+control ":ConsultationsController" as CC
+control ":PrescriptionsController" as PC
+control ":AiService" as AI
+participant ":GeminiClient" as GC
+database ":PostgreSQL" as DB
+
+M -> UI : iniciarAtendimento(consulta)
+activate UI
+UI -> CC : PATCH /consultations/{id}/start
+activate CC
+CC -> DB : actualizar estado = EM_ANDAMENTO
+CC -> DB : registar AuditLog
+CC --> UI : 200 Consultation
+deactivate CC
+UI --> M : formulário da consulta
+
+M -> UI : escrever diagnóstico
+opt médico pede sugestão de CID-10
+  UI -> AI : POST /ai/icd10 (diagnóstico)
+  activate AI
+  AI -> GC : generateJson(diagnóstico)
+  activate GC
+  GC --> AI : códigos sugeridos
+  deactivate GC
+  AI -> AI : descartar códigos com formato inválido
+  AI --> UI : 1 a 4 códigos CID-10
+  deactivate AI
+  M -> UI : escolher códigos
+end
+UI -> CC : PATCH /consultations/{id}/complete
+activate CC
+CC -> DB : gravar diagnóstico, notas, CID-10;\nestado = CONCLUIDA
+CC --> UI : 200 Consultation
+deactivate CC
+
+M -> UI : emitirPrescrição(medicamentos)
+UI -> PC : POST /prescriptions
+activate PC
+PC -> DB : criar Prescription (PENDENTE)\ne Medication[1..*]
+PC --> UI : 201 Prescription
+deactivate PC
+
+M -> UI : assinar(receita)
+UI -> AI : POST /ai/prescriptions/{id}/check
+activate AI
+AI -> DB : ler alergias e histórico\n(contexto anonimizado)
+AI -> AI : allergyConflicts() — regras locais
+alt serviço de IA disponível
+  AI -> GC : generateJson(contexto, medicamentos)
+  activate GC
+  GC --> AI : interacções, doses, contra-indicações
+  deactivate GC
+end
+AI -> DB : registar AuditLog (IA_VERIFICOU_RECEITA)
+AI --> UI : nível (OK | ATENCAO | PERIGO), problemas
+deactivate AI
+UI --> M : resultado da verificação
+
+opt nível = PERIGO
+  M -> UI : confirmar que reviu os alertas
+end
+UI -> PC : PATCH /prescriptions/{id}/sign
+activate PC
+PC -> DB : estado = EMITIDA
+PC -> DB : registar AuditLog
+opt assinada com alerta PERIGO
+  PC -> DB : registar AuditLog\n(ASSINOU_RECEITA_COM_ALERTA_IA)
+end
+PC -> DB : criar Notification para o paciente
+PC --> UI : 200 Prescription
+deactivate PC
+UI --> M : receita emitida
+deactivate UI
+@enduml

@@ -1,0 +1,69 @@
+@startuml
+!include skin.iuml
+skinparam componentStyle uml2
+skinparam nodesep 35
+skinparam ranksep 45
+
+package "Camada de Apresentação (navegador)" as L1 {
+  component "Aplicação Web LeeVida\n(React + TypeScript + Vite)" as SPA {
+    component "Páginas e\ncomponentes" as Pages
+    component "Contextos\n(Auth, Notificações, Tema)" as Ctx
+    component "Serviço de API\n(fetch + JWT)" as ApiCli
+  }
+}
+
+interface "REST /api/v1\n(HTTPS + JWT)" as REST
+interface "SSE /notifications/stream" as SSE
+
+package "Camada de Negócio (servidor Node.js)" as L2 {
+  component "API LeeVida (NestJS)" as API {
+    component "AuthModule" as Auth
+    component "UsersModule" as Users
+    component "PatientsModule" as Pat
+    component "ConsultationsModule" as Cons
+    component "PrescriptionsModule" as Rx
+    component "ExamsModule" as Ex
+    component "NotificationsModule" as Notif
+    component "AuditLogsModule" as Audit
+    component "AiModule" as AiM
+    component "PrismaModule" as Prisma
+  }
+}
+
+interface "SQL" as SQL
+interface "generateContent\n(HTTPS)" as GenAPI
+
+package "Camada de Dados" as L3 {
+  database "PostgreSQL" as PG
+}
+
+cloud "Serviço externo" as EXT {
+  component "Google Gemini API" as Gemini
+}
+
+Pages ..> Ctx
+Pages ..> ApiCli
+Ctx ..> ApiCli
+ApiCli ..> REST
+Ctx ..> SSE
+REST -- API
+SSE -- Notif
+
+Cons ..> Notif
+Cons ..> Audit
+Rx ..> Audit
+Ex ..> AiM
+AiM ..> Prisma
+Cons ..> Prisma
+Rx ..> Prisma
+Ex ..> Prisma
+Pat ..> Prisma
+Users ..> Prisma
+Auth ..> Users
+Audit ..> Prisma
+
+Prisma ..> SQL
+SQL -- PG
+AiM ..> GenAPI
+GenAPI -- Gemini
+@enduml

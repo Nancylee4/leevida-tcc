@@ -1,0 +1,48 @@
+@startuml
+!include skin.iuml
+skinparam ConditionEndStyle hline
+
+|Paciente|
+start
+:Chegar à clínica;
+|Enfermeiro|
+if (Paciente já registado?) then (não)
+  :Registar paciente;
+  :Entregar credenciais de acesso;
+else (sim)
+endif
+:Registar sinais vitais e sintomas;
+:Pedir sugestão de prioridade;
+|Sistema LeeVida|
+:Calcular prioridade mínima pelas regras;
+:Obter sugestão da IA;
+|Enfermeiro|
+:Confirmar ou alterar a cor (Manchester);
+|Sistema LeeVida|
+:Colocar paciente na fila (AGUARDANDO);
+:Notificar médicos;
+|Médico|
+:Seleccionar paciente da fila\n(ordenada por prioridade);
+:Iniciar atendimento;
+:Consultar prontuário e resumo pré-consulta;
+:Registar diagnóstico;
+if (Necessita de medicação?) then (sim)
+  :Emitir prescrição;
+  |Sistema LeeVida|
+  :Verificar segurança da receita;
+  |Médico|
+  :Assinar prescrição;
+else (não)
+endif
+if (Necessita de exames?) then (sim)
+  :Solicitar exames;
+else (não)
+endif
+:Concluir consulta;
+|Sistema LeeVida|
+:Actualizar histórico clínico;
+:Notificar paciente;
+|Paciente|
+:Consultar receita e histórico no portal;
+stop
+@enduml

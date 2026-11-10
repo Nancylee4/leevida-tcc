@@ -1,0 +1,194 @@
+@startuml
+!include skin.iuml
+skinparam nodesep 40
+skinparam ranksep 55
+hide empty methods
+
+class User {
+  - id : String
+  - name : String
+  - email : String {unique}
+  - password : String
+  - role : Role
+  - specialty : String [0..1]
+  - department : String [0..1]
+  - mustChangePassword : Boolean
+  - deactivatedAt : DateTime [0..1]
+  - createdAt : DateTime
+}
+
+class Patient {
+  - id : String
+  - name : String
+  - dob : Date
+  - gender : Gender
+  - phone : String
+  - address : String
+  - bloodType : String
+  - allergies : String [0..*]
+  - bi : String {unique}
+  - email : String [0..1]
+  - emergencyContact : String
+  - registeredAt : DateTime
+  - archivedAt : DateTime [0..1]
+}
+
+class Consultation {
+  - id : String
+  - date : DateTime
+  - reason : String
+  - isReturn : Boolean
+  - diagnosis : String
+  - notes : String
+  - status : ConsultationStatus
+  - icd10Codes : String [0..*]
+  - triagePriority : TriagePriority [0..1]
+  - triagePriorityReason : String [0..1]
+  - triagePrioritySource : TriagePrioritySource [0..1]
+}
+
+class VitalSigns {
+  - systolicBP : Integer
+  - diastolicBP : Integer
+  - heartRate : Integer
+  - temperature : Real
+  - weight : Real
+  - height : Real
+  - oxygenSat : Integer
+  - symptoms : String
+  - recordedAt : DateTime
+}
+
+class Prescription {
+  - id : String
+  - date : DateTime
+  - instructions : String
+  - status : PrescriptionStatus
+}
+
+class Medication {
+  - name : String
+  - dosage : String
+  - frequency : String
+  - duration : String
+}
+
+class Exam {
+  - id : String
+  - type : String
+  - status : ExamStatus
+  - requestedAt : DateTime
+  - result : String [0..1]
+  - resultDate : DateTime [0..1]
+  - aiCritical : Boolean [0..1]
+  - aiInterpretation : String [0..1]
+  - aiAnalyzedAt : DateTime [0..1]
+}
+
+class Justification {
+  - date : DateTime
+  - reason : String
+  - restDays : Integer
+  - notes : String
+}
+
+class DoctorSchedule {
+  - days : Json
+}
+
+class Notification {
+  - title : String
+  - message : String
+  - read : Boolean
+  - timestamp : DateTime
+  - recipientRole : Role [0..1]
+}
+
+class AuditLog {
+  - userName : String
+  - action : String
+  - resource : String
+  - resourceId : String [0..1]
+  - timestamp : DateTime
+  - ip : String
+}
+
+class AiConversation {
+  - title : String
+  - patientId : String [0..1]
+  - messages : Json
+  - updatedAt : DateTime
+}
+
+enum Role <<enumeration>> {
+  ADMIN
+  MEDICO
+  ENFERMEIRO
+  PACIENTE
+}
+
+enum ConsultationStatus <<enumeration>> {
+  AGENDADA
+  AGUARDANDO
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum TriagePriority <<enumeration>> {
+  VERMELHO
+  LARANJA
+  AMARELO
+  VERDE
+  AZUL
+}
+
+enum TriagePrioritySource <<enumeration>> {
+  IA_CONFIRMADA
+  IA_ALTERADA
+  REGRAS
+  MANUAL
+}
+
+enum PrescriptionStatus <<enumeration>> {
+  PENDENTE
+  EMITIDA
+}
+
+enum ExamStatus <<enumeration>> {
+  SOLICITADO
+  EM_ANALISE
+  CONCLUIDO
+}
+
+enum Gender <<enumeration>> {
+  M
+  F
+}
+
+Patient "1" -- "0..*" Consultation : tem >
+User "0..1" -- "0..*" Consultation : médico
+Consultation "1" *-- "0..1" VitalSigns
+User "1" -- "0..*" VitalSigns : regista >
+Patient "1" -- "0..*" Prescription
+User "1" -- "0..*" Prescription : prescritor
+Consultation "0..1" -- "0..*" Prescription : origina >
+Prescription "1" *-- "1..*" Medication
+Patient "1" -- "0..*" Exam
+User "1" -- "0..*" Exam : requisitante
+Consultation "1" *-- "0..*" Justification
+Patient "1" -- "0..*" Justification
+User "1" -- "0..*" Justification : emissor
+User "1" *-- "0..1" DoctorSchedule
+User "0..1" -- "0..*" Notification : destinatário
+User "1" -- "0..*" AuditLog : autor
+User "1" *-- "0..*" AiConversation
+
+Medication -[hidden]down- Role
+Role -[hidden]right- ConsultationStatus
+ConsultationStatus -[hidden]right- TriagePriority
+TriagePriority -[hidden]right- TriagePrioritySource
+TriagePrioritySource -[hidden]right- PrescriptionStatus
+PrescriptionStatus -[hidden]right- ExamStatus
+ExamStatus -[hidden]right- Gender
+@enduml

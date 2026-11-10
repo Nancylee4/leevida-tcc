@@ -1,0 +1,20 @@
+@startuml
+!include skin.iuml
+hide empty description
+
+state "AGENDADA" as AG
+state "AGUARDANDO" as AW
+state "EM_ANDAMENTO" as EA
+state "CONCLUIDA" as CO
+state "CANCELADA" as CA
+
+[*] --> AG : marcar consulta\n(paciente) / criar consulta (médico)
+[*] --> AW : registar triagem (enfermeiro)
+AG --> AG : aceitar [médico atribuído]
+AG --> CA : rejeitar (médico)
+AG --> EA : iniciar atendimento
+AW --> EA : iniciar atendimento
+EA --> CO : concluir [diagnóstico registado]
+CO --> [*]
+CA --> [*]
+@enduml

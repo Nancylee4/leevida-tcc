@@ -1,0 +1,39 @@
+@startuml
+!include skin.iuml
+skinparam nodesep 40
+skinparam ranksep 60
+
+node "Estação de trabalho da clínica" <<device>> as WS {
+  node "Navegador web" <<executionEnvironment>> as BR1 {
+    artifact "leevida-front-end\n(build estático)" as FE1
+  }
+}
+
+node "Smartphone / computador do paciente" <<device>> as PD {
+  node "Navegador web" <<executionEnvironment>> as BR2 {
+    artifact "leevida-front-end\n(portal do paciente)" as FE2
+  }
+}
+
+node "Servidor de aplicação" <<device>> as SRV {
+  node "Proxy reverso (HTTPS/TLS)" <<executionEnvironment>> as PX {
+    artifact "leevida-front-end/dist" as FEDIST
+  }
+  node "Node.js 20" <<executionEnvironment>> as NODE {
+    artifact "leevida-backend\n(API NestJS)" as BE
+  }
+  node "PostgreSQL 16" <<executionEnvironment>> as PGN {
+    artifact "leevida_db" as DBA
+  }
+}
+
+node "Google Cloud" <<device>> as GCP {
+  node "Gemini API" <<executionEnvironment>> as GEM
+}
+
+WS -- SRV : <<HTTPS>>\nrede local / Internet
+PD -- SRV : <<HTTPS>>\nInternet
+PX -- NODE : <<HTTP>>
+NODE -- PGN : <<TCP/IP>>
+SRV -- GCP : <<HTTPS>>
+@enduml
