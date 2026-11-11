@@ -13,10 +13,18 @@ Este repositório reúne a monografia e todos os artefactos produzidos no trabal
 | [TCC-Nancylee-Jamba-LeeVida.pdf](monografia/TCC-Nancylee-Jamba-LeeVida.pdf) | Versão para leitura |
 | [TCC-Nancylee-Jamba-LeeVida.docx](monografia/TCC-Nancylee-Jamba-LeeVida.docx) | Versão editável (Word) |
 
+## Manuais
+
+| Ficheiro | Para quem |
+|---|---|
+| [Manual do Programador](manuais/LeeVida-Manual-do-Programador.pdf) | Quem instala, mantém ou evolui o sistema: arquitectura, código, API, base de dados, IA, testes, segurança e implantação |
+| [Manual do Utilizador](manuais/LeeVida-Manual-do-Utilizador.pdf) | Administradores, médicos, enfermeiros e pacientes: guia passo a passo com capturas de ecrã |
+
 ## Estrutura
 
 ```
 monografia/            a monografia em PDF e Word
+manuais/               manual do programador e manual do utilizador (PDF)
 artefactos/
   uml/fontes/          código-fonte PlantUML dos diagramas (.puml)
   uml/imagens/         diagramas UML em PNG (200 ppp)
