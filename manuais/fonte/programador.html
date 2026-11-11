@@ -19,7 +19,7 @@
     <b>Projecto:</b> Trabalho de Conclusão de Curso — Engenharia Informática, ISPTEC<br>
     <b>Autora:</b> Nancylee Danila Tome Jamba · <b>Orientador:</b> Judson Paiva<br>
     <b>Versão do documento:</b> 1.0 · Novembro de 2026<br>
-    <b>Repositório de artefactos:</b> github.com/RuiYuriAfricano/leevida-tcc
+    <b>Repositórios:</b> github.com/Nancylee4/leevida-tcc (artefactos) · github.com/Nancylee4/leevida-backend (API) · github.com/Nancylee4/front-end (aplicação web)
   </div>
 </section>
 
@@ -32,7 +32,7 @@
     <li>4. Tecnologias e versões</li>
     <li>5. Estrutura do código</li>
     <li>6. Preparar o ambiente de desenvolvimento
-      <ol><li>Pré-requisitos · Base de dados · Variáveis de ambiente · Arranque · Contas de demonstração</li></ol></li>
+      <ol><li>Pré-requisitos · Obter o código · Base de dados · Variáveis de ambiente · Arranque · Contas de demonstração</li></ol></li>
     <li>7. Backend (API NestJS)
       <ol><li>Módulos · Ciclo de vida de um pedido · Autenticação e autorização · Regras de negócio · Notificações em tempo real · Auditoria</li></ol></li>
     <li>8. Referência da API</li>
@@ -52,15 +52,16 @@
 
 <h1>1. Introdução</h1>
 <p>O LeeVida é um sistema web de prontuário clínico concebido para pequenas clínicas angolanas, com a Clínica EmiPharma (Caála, Huambo) como caso de estudo. Este manual destina-se a programadores e técnicos de informática que precisem de instalar o sistema, corrigir erros, acrescentar funcionalidades ou colocá-lo em produção. Pressupõe familiaridade com TypeScript, Node.js, React e bases de dados relacionais.</p>
-<p>O código está organizado como um monorepo com dois projectos independentes:</p>
+<p>O projecto está distribuído por três repositórios Git independentes, alojados no GitHub:</p>
 <table>
-  <thead><tr><th style="width:30%">Pasta</th><th>Conteúdo</th></tr></thead>
+  <thead><tr><th style="width:30%">Pasta local</th><th>Conteúdo</th><th style="width:36%">Repositório</th></tr></thead>
   <tbody>
-    <tr><td><code>leevida-backend/</code></td><td>API REST em NestJS, com Prisma (ORM) e PostgreSQL.</td></tr>
-    <tr><td><code>leevida-front-end/</code></td><td>Aplicação web (Single Page Application) em React, Vite e Tailwind CSS.</td></tr>
+    <tr><td><code>leevida-backend/</code></td><td>API REST em NestJS, com Prisma (ORM) e PostgreSQL.</td><td><a href="https://github.com/Nancylee4/leevida-backend">github.com/Nancylee4/leevida-backend</a></td></tr>
+    <tr><td><code>leevida-front-end/</code></td><td>Aplicação web (Single Page Application) em React, Vite e Tailwind CSS.</td><td><a href="https://github.com/Nancylee4/front-end">github.com/Nancylee4/front-end</a></td></tr>
+    <tr><td><code>leevida-tcc/</code></td><td>Monografia, manuais, diagramas UML, capturas de ecrã e evidências da investigação.</td><td><a href="https://github.com/Nancylee4/leevida-tcc">github.com/Nancylee4/leevida-tcc</a></td></tr>
   </tbody>
 </table>
-<div class="note"><b>Convenções deste manual</b>Os caminhos de ficheiros são relativos à raiz do monorepo. Os comandos de terminal são escritos para bash (Git Bash no Windows). As rotas da API omitem o prefixo <code>/api/v1</code>, salvo indicação em contrário.</div>
+<div class="note"><b>Convenções deste manual</b>Os caminhos de ficheiros são relativos a uma pasta de trabalho onde os repositórios são clonados lado a lado (ver 6.2). Os comandos de terminal são escritos para bash (Git Bash no Windows). As rotas da API omitem o prefixo <code>/api/v1</code>, salvo indicação em contrário.</div>
 
 <h1>2. Visão geral do sistema</h1>
 <p>O sistema serve quatro perfis de utilizador, cada um com um conjunto fechado de permissões aplicado no servidor:</p>
@@ -77,7 +78,7 @@
 
 <h1>3. Arquitectura</h1>
 <p>O LeeVida segue uma arquitectura cliente-servidor em três camadas. O navegador comunica apenas com a API, nunca directamente com a base de dados nem com o serviço de IA.</p>
-<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/07-componentes.png" style="max-height:150mm"><figcaption>Diagrama de componentes do LeeVida (UML 2.5.1).</figcaption></figure>
+<figure class="diagram"><img src="../../artefactos/uml/imagens/07-componentes.png" style="max-height:150mm"><figcaption>Diagrama de componentes do LeeVida (UML 2.5.1).</figcaption></figure>
 <table>
   <thead><tr><th style="width:22%">Camada</th><th>Responsabilidade</th></tr></thead>
   <tbody>
@@ -160,11 +161,18 @@ types/               tipos partilhados</pre>
   <li>Git.</li>
   <li>Opcional: uma chave da API Gemini (<code>aistudio.google.com/apikey</code>) para activar a IA.</li>
 </ul>
-<h2>6.2 Base de dados</h2>
+<h2>6.2 Obter o código</h2>
+<p>Clonar os repositórios lado a lado numa mesma pasta de trabalho. O repositório do frontend chama-se <code>front-end</code> no GitHub; é clonado para a pasta <code>leevida-front-end/</code> para corresponder aos caminhos deste manual:</p>
+<pre><code>mkdir LeeVida && cd LeeVida
+git clone https://github.com/Nancylee4/leevida-backend.git
+git clone https://github.com/Nancylee4/front-end.git leevida-front-end
+git clone https://github.com/Nancylee4/leevida-tcc.git     # documentação (opcional)</code></pre>
+<p>O ramo principal é <code>master</code> no backend e <code>main</code> no frontend e na documentação.</p>
+<h2>6.3 Base de dados</h2>
 <p>Com Docker, a partir de <code>leevida-backend/</code>:</p>
 <pre><code>docker compose up -d     # PostgreSQL 16 na porta 5433, base leevida_db</code></pre>
 <p>Com PostgreSQL nativo, basta criar uma base e apontar <code>DATABASE_URL</code> para ela.</p>
-<h2>6.3 Variáveis de ambiente</h2>
+<h2>6.4 Variáveis de ambiente</h2>
 <p>Copiar <code>leevida-backend/.env.example</code> para <code>.env</code> e preencher:</p>
 <table>
   <thead><tr><th style="width:30%">Variável</th><th>Significado</th></tr></thead>
@@ -182,7 +190,7 @@ types/               tipos partilhados</pre>
 </table>
 <p>No frontend, <code>leevida-front-end/.env</code> define <code>VITE_API_URL</code> (por omissão <code>http://localhost:3000/api/v1</code>).</p>
 <div class="warn"><b>Nunca versionar o ficheiro .env</b>Contém a ligação à base de dados, os segredos JWT e a chave da IA. O repositório só deve conter o <code>.env.example</code>.</div>
-<h2>6.4 Arranque</h2>
+<h2>6.5 Arranque</h2>
 <pre><code># API
 cd leevida-backend
 npm install
@@ -194,7 +202,7 @@ npm run start:dev          # http://localhost:3000/api/v1  ·  Swagger em /api/d
 cd leevida-front-end
 npm install
 npm run dev                # http://localhost:5173</code></pre>
-<h2>6.5 Scripts úteis</h2>
+<h2>6.6 Scripts úteis</h2>
 <table>
   <thead><tr><th style="width:34%">Comando</th><th>Função</th></tr></thead>
   <tbody>
@@ -209,15 +217,18 @@ npm run dev                # http://localhost:5173</code></pre>
     <tr><td><code>npm test</code> (frontend)</td><td>Testes com Vitest</td></tr>
   </tbody>
 </table>
-<h2>6.6 Contas de demonstração</h2>
+<h2>6.7 Contas de demonstração</h2>
 <p>Criadas pelo <code>db:seed</code>, todas com a senha <code>123456</code>. Servem apenas para desenvolvimento e devem ser removidas em produção.</p>
+<p>O seed também gera um histórico clínico de demonstração de Janeiro de 2025 a Dezembro de 2026: cerca de 40 pacientes, consultas com sinais vitais, triagem e CID-10, receitas, exames, justificativos, notificações e auditoria. As consultas passadas ficam concluídas ou canceladas e as futuras agendadas. Os dados são sempre os mesmos e o comando pode ser repetido: apaga e recria os dados clínicos.</p>
 <table>
   <thead><tr><th>E-mail</th><th>Perfil</th></tr></thead>
   <tbody>
     <tr><td><code>admin@leevida.ao</code></td><td>Administrador</td></tr>
     <tr><td><code>medico@leevida.ao</code></td><td>Médico (Clínica Geral)</td></tr>
     <tr><td><code>beatriz@leevida.ao</code></td><td>Médico (Pediatria)</td></tr>
-    <tr><td><code>enfermeira@leevida.ao</code>, <code>carlos@leevida.ao</code></td><td>Enfermeiro</td></tr>
+    <tr><td><code>mario@leevida.ao</code></td><td>Médico (Medicina Interna)</td></tr>
+    <tr><td><code>luisa@leevida.ao</code></td><td>Médico (Cardiologia)</td></tr>
+    <tr><td><code>enfermeira@leevida.ao</code>, <code>carlos@leevida.ao</code>, <code>rosa@leevida.ao</code></td><td>Enfermeiro</td></tr>
     <tr><td><code>paciente@leevida.ao</code></td><td>Paciente</td></tr>
   </tbody>
 </table>
@@ -274,7 +285,7 @@ npm run dev                # http://localhost:5173</code></pre>
   <li>Um justificativo médico só pode ser emitido a partir de uma consulta <code>EM_ANDAMENTO</code> ou <code>CONCLUIDA</code>.</li>
   <li>Os pacientes não se apagam: são arquivados (<code>archivedAt</code>) e saem das listagens.</li>
 </ul>
-<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/06-estados-consulta.png" style="max-height:80mm"><figcaption>Máquina de estados da consulta.</figcaption></figure>
+<figure class="diagram"><img src="../../artefactos/uml/imagens/06-estados-consulta.png" style="max-height:80mm"><figcaption>Máquina de estados da consulta.</figcaption></figure>
 
 <h2>7.5 Notificações em tempo real</h2>
 <p>O <code>NotificationsService</code> grava cada notificação na tabela <code>notifications</code> e envia-a pelo canal <b>Server-Sent Events</b> <code>GET /notifications/stream</code>. As notificações podem ser dirigidas a um utilizador (<code>notifyUser</code>) ou a um perfil inteiro (<code>notifyRole</code>, por exemplo "novo paciente em triagem" para todos os médicos). O <code>NotificationContext</code> do frontend mantém a ligação aberta e actualiza o sino da barra superior.</p>
@@ -341,7 +352,7 @@ npm run dev                # http://localhost:5173</code></pre>
 <h1>9. Base de dados</h1>
 <h2>9.1 Modelo de domínio</h2>
 <p>O ficheiro <code>prisma/schema.prisma</code> é a fonte de verdade. O diagrama seguinte representa-o em UML.</p>
-<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/02-classes.png"><figcaption>Diagrama de classes do domínio (equivalente ao esquema Prisma).</figcaption></figure>
+<figure class="diagram"><img src="../../artefactos/uml/imagens/02-classes.png"><figcaption>Diagrama de classes do domínio (equivalente ao esquema Prisma).</figcaption></figure>
 <table>
   <thead><tr><th style="width:20%">Modelo (tabela)</th><th>Descrição e regras de integridade</th></tr></thead>
   <tbody>
@@ -397,7 +408,7 @@ npm run dev                # http://localhost:5173</code></pre>
     <tr><td><code>clinical-rules.ts</code></td><td>Regras determinísticas: prioridade mínima por sinais vitais (<code>triageFloor</code>), conflitos de alergia por classe de fármaco (<code>allergyConflicts</code>) e valores laboratoriais de pânico.</td></tr>
   </tbody>
 </table>
-<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/04-seq-triagem-ia.png" style="max-height:120mm"><figcaption>Sequência de um pedido de IA: triagem com prioridade mínima por regras.</figcaption></figure>
+<figure class="diagram"><img src="../../artefactos/uml/imagens/04-seq-triagem-ia.png" style="max-height:120mm"><figcaption>Sequência de um pedido de IA: triagem com prioridade mínima por regras.</figcaption></figure>
 <h2>10.2 Regras clínicas (resumo)</h2>
 <ul>
   <li><b>Triagem</b>: a prioridade final é sempre a mais urgente entre a da IA e a calculada pelos sinais vitais (por exemplo, SpO₂ &lt; 90% impõe no mínimo laranja). A IA pode subir a prioridade, nunca descê-la.</li>
@@ -478,7 +489,7 @@ npm run dev                # http://localhost:5173</code></pre>
 </table>
 
 <h1>14. Implantação em produção</h1>
-<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/08-implantacao.png" style="max-height:110mm"><figcaption>Diagrama de implantação recomendado.</figcaption></figure>
+<figure class="diagram"><img src="../../artefactos/uml/imagens/08-implantacao.png" style="max-height:110mm"><figcaption>Diagrama de implantação recomendado.</figcaption></figure>
 <ol class="steps">
   <li><b>Servidor</b>: Linux (ou Windows Server) com 2 vCPU, 4 GB de RAM e 40 GB SSD, local na clínica ou alugado na nuvem. Instalar Node.js 20+, PostgreSQL 16+ e um proxy reverso (Nginx ou Caddy).</li>
   <li><b>Base de dados</b>: criar utilizador e base próprios, sem acesso pela rede externa.</li>
