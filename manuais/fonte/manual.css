@@ -1,0 +1,60 @@
+@page { size: A4; margin: 20mm 18mm 22mm 18mm; }
+:root {
+  --ink: #1d1b26; --muted: #5d5872; --line: #d9d4e8; --brand: #5b3fa8; --brand-soft: #f1ecfb;
+  --warn: #8a5300; --warn-soft: #fff4dc; --ok-soft: #e7f5ec; --code: #f6f5fa;
+}
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.55; margin: 0; }
+h1, h2, h3, h4 { color: var(--ink); line-height: 1.25; page-break-after: avoid; break-after: avoid; }
+h1 { font-size: 20pt; color: var(--brand); border-bottom: 2px solid var(--brand); padding-bottom: 6px; margin: 0 0 14px; break-before: page; }
+h2 { font-size: 13.5pt; margin: 22px 0 8px; }
+h3 { font-size: 11.5pt; margin: 16px 0 6px; color: var(--brand); }
+p { margin: 0 0 9px; text-align: justify; }
+ul, ol { margin: 0 0 10px; padding-left: 20px; }
+li { margin-bottom: 3px; }
+a { color: var(--brand); text-decoration: none; }
+code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 9pt; background: var(--code); padding: 1px 4px; border-radius: 3px; }
+pre { font-family: Consolas, "Cascadia Mono", monospace; font-size: 8.6pt; line-height: 1.45; background: var(--code); border: 1px solid var(--line); border-left: 3px solid var(--brand); padding: 9px 12px; border-radius: 4px; white-space: pre-wrap; break-inside: avoid; margin: 0 0 12px; }
+pre code { background: none; padding: 0; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: 9.2pt; break-inside: auto; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { background: #3b2a6b; color: #fff; text-align: left; font-weight: 600; padding: 6px 8px; }
+td { border-bottom: 1px solid var(--line); padding: 5px 8px; vertical-align: top; }
+tr:nth-child(even) td { background: #faf9fd; }
+td code { white-space: nowrap; }
+figure { margin: 10px 0 16px; text-align: center; break-inside: avoid; }
+figure img { max-width: 100%; max-height: 205mm; border: 1px solid var(--line); border-radius: 4px; }
+figure.diagram img { border: none; }
+figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 5px; }
+.note, .warn, .tip { border-radius: 5px; padding: 8px 12px; margin: 8px 0 12px; break-inside: avoid; font-size: 9.8pt; }
+.note { background: var(--brand-soft); border-left: 4px solid var(--brand); }
+.warn { background: var(--warn-soft); border-left: 4px solid #d48a00; }
+.tip { background: var(--ok-soft); border-left: 4px solid #2e8b57; }
+.note b:first-child, .warn b:first-child, .tip b:first-child { display: block; margin-bottom: 2px; }
+.steps { counter-reset: s; list-style: none; padding-left: 0; }
+.steps > li { counter-increment: s; position: relative; padding-left: 30px; margin-bottom: 6px; }
+.steps > li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 8.5pt; font-weight: 700; text-align: center; line-height: 20px; }
+.kbd { font-family: Consolas, monospace; font-size: 8.8pt; border: 1px solid #bdb6d3; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; background: #fff; }
+.ui { font-weight: 600; color: #3b2a6b; }
+.cols { display: flex; gap: 14px; }
+.cols > * { flex: 1; }
+
+/* capa */
+.cover { height: 250mm; display: flex; flex-direction: column; justify-content: space-between; }
+.cover .top { font-size: 9.5pt; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cover .mid h1 { font-size: 30pt; border: none; color: var(--ink); margin: 0 0 6px; break-before: auto; padding: 0; }
+.cover .mid .sub { font-size: 14pt; color: var(--brand); margin-bottom: 18px; }
+.cover .mid p { font-size: 11pt; color: var(--muted); max-width: 140mm; text-align: left; }
+.cover .band { height: 6px; background: linear-gradient(90deg, #5b3fa8, #7c3aed 55%, #2e8b57); border-radius: 3px; margin-bottom: 20px; }
+.cover .meta { font-size: 9.5pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+.cover .meta b { color: var(--ink); }
+
+/* índice */
+.toc { break-before: page; }
+.toc h1 { break-before: auto; }
+.toc ol { list-style: none; padding: 0; columns: 1; }
+.toc > ol > li { font-weight: 600; margin: 7px 0 2px; }
+.toc ol ol { font-weight: 400; padding-left: 18px; columns: 1; }
+.toc ol ol li { margin: 1px 0; font-size: 9.6pt; color: var(--muted); }

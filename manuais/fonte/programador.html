@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>LeeVida — Manual do Programador</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+
+<section class="cover">
+  <div class="top">LeeVida · Sistema de Prontuário Clínico</div>
+  <div class="mid">
+    <div class="band"></div>
+    <h1>Manual do Programador</h1>
+    <div class="sub">Arquitectura, código, API, base de dados e implantação</div>
+    <p>Guia técnico para quem vai instalar, manter ou evoluir o LeeVida: como o sistema está organizado, como correr o projecto localmente, como funcionam a autenticação, as regras de negócio, as notificações, a auditoria e as funcionalidades de inteligência artificial, e como o colocar em produção.</p>
+  </div>
+  <div class="meta">
+    <b>Projecto:</b> Trabalho de Conclusão de Curso — Engenharia Informática, ISPTEC<br>
+    <b>Autora:</b> Nancylee Danila Tome Jamba · <b>Orientador:</b> Judson Paiva<br>
+    <b>Versão do documento:</b> 1.0 · Novembro de 2026<br>
+    <b>Repositório de artefactos:</b> github.com/RuiYuriAfricano/leevida-tcc
+  </div>
+</section>
+
+<section class="toc">
+  <h1>Índice</h1>
+  <ol>
+    <li>1. Introdução</li>
+    <li>2. Visão geral do sistema</li>
+    <li>3. Arquitectura</li>
+    <li>4. Tecnologias e versões</li>
+    <li>5. Estrutura do código</li>
+    <li>6. Preparar o ambiente de desenvolvimento
+      <ol><li>Pré-requisitos · Base de dados · Variáveis de ambiente · Arranque · Contas de demonstração</li></ol></li>
+    <li>7. Backend (API NestJS)
+      <ol><li>Módulos · Ciclo de vida de um pedido · Autenticação e autorização · Regras de negócio · Notificações em tempo real · Auditoria</li></ol></li>
+    <li>8. Referência da API</li>
+    <li>9. Base de dados
+      <ol><li>Modelo de domínio · Enumerações · Migrações · Dados de demonstração</li></ol></li>
+    <li>10. Módulo de inteligência artificial
+      <ol><li>Componentes · Regras clínicas · Fiabilidade · Privacidade · Configuração</li></ol></li>
+    <li>11. Frontend (React)
+      <ol><li>Estrutura · Rotas e perfis · Estado global · Cliente da API · Exportações</li></ol></li>
+    <li>12. Testes</li>
+    <li>13. Segurança</li>
+    <li>14. Implantação em produção</li>
+    <li>15. Guias práticos de evolução</li>
+    <li>16. Resolução de problemas</li>
+  </ol>
+</section>
+
+<h1>1. Introdução</h1>
+<p>O LeeVida é um sistema web de prontuário clínico concebido para pequenas clínicas angolanas, com a Clínica EmiPharma (Caála, Huambo) como caso de estudo. Este manual destina-se a programadores e técnicos de informática que precisem de instalar o sistema, corrigir erros, acrescentar funcionalidades ou colocá-lo em produção. Pressupõe familiaridade com TypeScript, Node.js, React e bases de dados relacionais.</p>
+<p>O código está organizado como um monorepo com dois projectos independentes:</p>
+<table>
+  <thead><tr><th style="width:30%">Pasta</th><th>Conteúdo</th></tr></thead>
+  <tbody>
+    <tr><td><code>leevida-backend/</code></td><td>API REST em NestJS, com Prisma (ORM) e PostgreSQL.</td></tr>
+    <tr><td><code>leevida-front-end/</code></td><td>Aplicação web (Single Page Application) em React, Vite e Tailwind CSS.</td></tr>
+  </tbody>
+</table>
+<div class="note"><b>Convenções deste manual</b>Os caminhos de ficheiros são relativos à raiz do monorepo. Os comandos de terminal são escritos para bash (Git Bash no Windows). As rotas da API omitem o prefixo <code>/api/v1</code>, salvo indicação em contrário.</div>
+
+<h1>2. Visão geral do sistema</h1>
+<p>O sistema serve quatro perfis de utilizador, cada um com um conjunto fechado de permissões aplicado no servidor:</p>
+<table>
+  <thead><tr><th style="width:17%">Perfil</th><th>O que faz no sistema</th></tr></thead>
+  <tbody>
+    <tr><td><b>Administrador</b></td><td>Gere as contas dos profissionais, repõe senhas, desactiva contas, consulta o registo de auditoria e vê os indicadores globais.</td></tr>
+    <tr><td><b>Enfermeiro</b></td><td>Regista pacientes (o registo cria também a conta do paciente), faz a triagem com sinais vitais, sintomas e prioridade de Manchester, e acompanha o estado dos exames sem ver os resultados.</td></tr>
+    <tr><td><b>Médico</b></td><td>Gere a agenda, aceita ou rejeita consultas, atende a fila por prioridade, regista diagnósticos e códigos CID-10, emite e assina prescrições, solicita exames e regista resultados, emite justificativos e usa o assistente de IA.</td></tr>
+    <tr><td><b>Paciente</b></td><td>Não se auto-regista: entra com as credenciais dadas pelo enfermeiro. No portal marca consultas e consulta o seu histórico, receitas e exames.</td></tr>
+  </tbody>
+</table>
+<p>Às funcionalidades clínicas juntam-se notificações em tempo real, exportação para Excel e PDF, registo de auditoria de todas as acções críticas e seis funcionalidades de inteligência artificial de apoio à decisão (secção 10).</p>
+
+<h1>3. Arquitectura</h1>
+<p>O LeeVida segue uma arquitectura cliente-servidor em três camadas. O navegador comunica apenas com a API, nunca directamente com a base de dados nem com o serviço de IA.</p>
+<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/07-componentes.png" style="max-height:150mm"><figcaption>Diagrama de componentes do LeeVida (UML 2.5.1).</figcaption></figure>
+<table>
+  <thead><tr><th style="width:22%">Camada</th><th>Responsabilidade</th></tr></thead>
+  <tbody>
+    <tr><td><b>Apresentação</b></td><td>SPA em React: páginas por perfil, componentes reutilizáveis e contextos de estado (autenticação, notificações, tema e mensagens). Fala com a API por um cliente HTTP único, que injecta o token JWT e renova a sessão automaticamente.</td></tr>
+    <tr><td><b>Negócio</b></td><td>API NestJS organizada em módulos por domínio. Concentra validação, autenticação, autorização por perfil, regras de negócio, auditoria, notificações (Server-Sent Events) e a integração com a IA.</td></tr>
+    <tr><td><b>Dados</b></td><td>PostgreSQL, acedido exclusivamente pelo <code>PrismaModule</code>. O esquema e as migrações estão em <code>leevida-backend/prisma/</code>.</td></tr>
+    <tr><td><b>Serviço externo</b></td><td>Google Gemini API, chamada apenas pelo <code>AiModule</code>, com dados anonimizados. É opcional: sem chave, o sistema funciona com regras locais.</td></tr>
+  </tbody>
+</table>
+
+<h1>4. Tecnologias e versões</h1>
+<table>
+  <thead><tr><th style="width:28%">Componente</th><th style="width:18%">Versão</th><th>Uso</th></tr></thead>
+  <tbody>
+    <tr><td>Node.js</td><td>20 ou superior</td><td>Execução da API e ferramentas de build</td></tr>
+    <tr><td>TypeScript</td><td>5.x</td><td>Linguagem do backend e do frontend</td></tr>
+    <tr><td>NestJS</td><td>11</td><td>Framework da API (módulos, injecção de dependências, guards, pipes)</td></tr>
+    <tr><td>Prisma ORM</td><td>6.19</td><td>Esquema, cliente tipado e migrações</td></tr>
+    <tr><td>PostgreSQL</td><td>16 ou superior</td><td>Base de dados relacional</td></tr>
+    <tr><td>Passport + JWT, bcrypt</td><td>—</td><td>Autenticação e hash de senhas</td></tr>
+    <tr><td>Helmet, @nestjs/throttler</td><td>—</td><td>Cabeçalhos de segurança e limitação de pedidos</td></tr>
+    <tr><td>React</td><td>18.3</td><td>Interface</td></tr>
+    <tr><td>React Router</td><td>7</td><td>Navegação e rotas protegidas por perfil</td></tr>
+    <tr><td>Vite</td><td>5.4</td><td>Servidor de desenvolvimento e build</td></tr>
+    <tr><td>Tailwind CSS</td><td>3.4</td><td>Estilos</td></tr>
+    <tr><td>lucide-react, ExcelJS, jsPDF</td><td>—</td><td>Ícones e exportação para Excel e PDF</td></tr>
+    <tr><td>Jest / Vitest</td><td>30 / 4</td><td>Testes do backend / frontend</td></tr>
+    <tr><td>Google Gemini API</td><td>—</td><td>Funcionalidades de IA (opcional)</td></tr>
+  </tbody>
+</table>
+
+<h1>5. Estrutura do código</h1>
+<h2>Backend — <code>leevida-backend/</code></h2>
+<pre>prisma/
+  schema.prisma        modelo de dados (fonte de verdade)
+  migrations/          migrações SQL versionadas
+  seed.ts              dados de demonstração
+src/
+  main.ts              arranque: Helmet, CORS, versionamento, ValidationPipe, Swagger
+  app.module.ts        registo dos módulos e do ThrottlerGuard global
+  config/              leitura e validação das variáveis de ambiente
+  prisma/              PrismaService / PrismaModule (global)
+  common/              decorators (@Public, @Roles, @CurrentUser), RolesGuard,
+                       filtro de excepções, interceptor de logs, política de senhas
+  auth/                login, refresh, logout, troca de senha, estratégia JWT
+  users/               gestão de utilizadores (admin) e perfil próprio
+  patients/            registo de pacientes e emissão de credenciais
+  consultations/       consultas, triagem, marcação, fila de espera
+  prescriptions/       emissão e assinatura de receitas
+  exams/               pedido de exames e registo de resultados
+  doctor-schedules/    agenda de disponibilidade dos médicos
+  justifications/      justificativos médicos
+  notifications/       notificações (persistidas + SSE)
+  audit-logs/          registo de auditoria
+  ai/                  integração Gemini, regras clínicas, contexto anonimizado
+test/                  testes ponta a ponta (Jest)</pre>
+<p>Cada módulo de domínio segue o padrão NestJS: <code>*.module.ts</code> (ligações), <code>*.controller.ts</code> (rotas e perfis), <code>*.service.ts</code> (regras de negócio e acesso ao Prisma) e <code>dto/</code> (objectos de entrada validados com <code>class-validator</code>).</p>
+
+<h2>Frontend — <code>leevida-front-end/src/</code></h2>
+<pre>App.tsx              rotas e protecção por perfil (ProtectedRoute)
+main.tsx             arranque
+layouts/             DashboardLayout, Sidebar, Topbar
+pages/               uma página por área (Dashboard, Patients, Consultations,
+                     Prescriptions, Exams, Nurse, Agenda, History, Admin,
+                     Logs, PatientPortal, Profile, Login)
+components/          AiAssistant, AiPatientSummary, PrescriptionSafetyModal,
+                     ExamInsightModal, TriageBadge, ExportMenu, ConfirmModal, …
+contexts/            AuthContext, NotificationContext, ThemeContext, ToastContext
+services/apiClient.ts   cliente HTTP (token, renovação de sessão, erros)
+services/api/        um ficheiro por recurso da API (patients.ts, exams.ts, ai.ts, …)
+hooks/               useDoctorDirectory
+utils/               exportação Excel/PDF, impressão de documentos, formatação
+types/               tipos partilhados</pre>
+
+<h1>6. Preparar o ambiente de desenvolvimento</h1>
+<h2>6.1 Pré-requisitos</h2>
+<ul>
+  <li>Node.js 20+ e npm.</li>
+  <li>PostgreSQL 16+ instalado localmente, <b>ou</b> Docker Desktop (o projecto inclui um <code>docker-compose.yml</code>).</li>
+  <li>Git.</li>
+  <li>Opcional: uma chave da API Gemini (<code>aistudio.google.com/apikey</code>) para activar a IA.</li>
+</ul>
+<h2>6.2 Base de dados</h2>
+<p>Com Docker, a partir de <code>leevida-backend/</code>:</p>
+<pre><code>docker compose up -d     # PostgreSQL 16 na porta 5433, base leevida_db</code></pre>
+<p>Com PostgreSQL nativo, basta criar uma base e apontar <code>DATABASE_URL</code> para ela.</p>
+<h2>6.3 Variáveis de ambiente</h2>
+<p>Copiar <code>leevida-backend/.env.example</code> para <code>.env</code> e preencher:</p>
+<table>
+  <thead><tr><th style="width:30%">Variável</th><th>Significado</th></tr></thead>
+  <tbody>
+    <tr><td><code>NODE_ENV</code>, <code>PORT</code></td><td>Ambiente e porta da API (por omissão 3000).</td></tr>
+    <tr><td><code>DATABASE_URL</code></td><td>Ligação PostgreSQL, por exemplo <code>postgresql://utilizador:senha@localhost:5433/leevida_db?schema=public</code>.</td></tr>
+    <tr><td><code>JWT_ACCESS_SECRET</code>, <code>JWT_REFRESH_SECRET</code></td><td>Segredos de assinatura dos tokens. Usar valores longos e aleatórios, diferentes entre si.</td></tr>
+    <tr><td><code>JWT_ACCESS_EXPIRES_IN</code>, <code>JWT_REFRESH_EXPIRES_IN</code></td><td>Validade dos tokens (por omissão <code>15m</code> e <code>7d</code>).</td></tr>
+    <tr><td><code>CORS_ORIGIN</code></td><td>Origem autorizada do frontend, por exemplo <code>http://localhost:5173</code>.</td></tr>
+    <tr><td><code>TRUST_PROXY</code></td><td>Número de proxies de confiança em produção (vazio em desenvolvimento). Necessário para o IP correcto na auditoria.</td></tr>
+    <tr><td><code>CLINIC_TIMEZONE</code></td><td>Fuso horário da clínica (<code>Africa/Luanda</code>), usado para validar marcações contra a agenda.</td></tr>
+    <tr><td><code>GEMINI_API_KEY</code></td><td>Chave da API Gemini. Sem chave, a IA fica desactivada e o sistema usa só as regras locais.</td></tr>
+    <tr><td><code>GEMINI_MODEL</code>, <code>GEMINI_FALLBACK_MODELS</code></td><td>Modelo principal e lista de modelos de reserva, separados por vírgulas.</td></tr>
+  </tbody>
+</table>
+<p>No frontend, <code>leevida-front-end/.env</code> define <code>VITE_API_URL</code> (por omissão <code>http://localhost:3000/api/v1</code>).</p>
+<div class="warn"><b>Nunca versionar o ficheiro .env</b>Contém a ligação à base de dados, os segredos JWT e a chave da IA. O repositório só deve conter o <code>.env.example</code>.</div>
+<h2>6.4 Arranque</h2>
+<pre><code># API
+cd leevida-backend
+npm install
+npm run prisma:migrate     # aplica as migrações
+npm run db:seed            # dados de demonstração
+npm run start:dev          # http://localhost:3000/api/v1  ·  Swagger em /api/docs
+
+# Aplicação web (noutro terminal)
+cd leevida-front-end
+npm install
+npm run dev                # http://localhost:5173</code></pre>
+<h2>6.5 Scripts úteis</h2>
+<table>
+  <thead><tr><th style="width:34%">Comando</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm run start:dev</code></td><td>API com recarregamento automático</td></tr>
+    <tr><td><code>npm run build</code> / <code>start:prod</code></td><td>Compilar a API para <code>dist/</code> e correr a versão compilada</td></tr>
+    <tr><td><code>npm run prisma:migrate</code></td><td>Criar ou aplicar migrações em desenvolvimento</td></tr>
+    <tr><td><code>npm run prisma:studio</code></td><td>Interface gráfica para inspeccionar a base de dados</td></tr>
+    <tr><td><code>npm run db:seed</code></td><td>Repor os dados de demonstração</td></tr>
+    <tr><td><code>npm test</code> (backend)</td><td>Testes unitários com Jest</td></tr>
+    <tr><td><code>npm run lint</code></td><td>ESLint (backend e frontend)</td></tr>
+    <tr><td><code>npm run typecheck</code> (frontend)</td><td>Verificação de tipos sem gerar ficheiros</td></tr>
+    <tr><td><code>npm test</code> (frontend)</td><td>Testes com Vitest</td></tr>
+  </tbody>
+</table>
+<h2>6.6 Contas de demonstração</h2>
+<p>Criadas pelo <code>db:seed</code>, todas com a senha <code>123456</code>. Servem apenas para desenvolvimento e devem ser removidas em produção.</p>
+<table>
+  <thead><tr><th>E-mail</th><th>Perfil</th></tr></thead>
+  <tbody>
+    <tr><td><code>admin@leevida.ao</code></td><td>Administrador</td></tr>
+    <tr><td><code>medico@leevida.ao</code></td><td>Médico (Clínica Geral)</td></tr>
+    <tr><td><code>beatriz@leevida.ao</code></td><td>Médico (Pediatria)</td></tr>
+    <tr><td><code>enfermeira@leevida.ao</code>, <code>carlos@leevida.ao</code></td><td>Enfermeiro</td></tr>
+    <tr><td><code>paciente@leevida.ao</code></td><td>Paciente</td></tr>
+  </tbody>
+</table>
+
+<h1>7. Backend (API NestJS)</h1>
+<h2>7.1 Módulos</h2>
+<table>
+  <thead><tr><th style="width:25%">Módulo</th><th>Responsabilidade</th></tr></thead>
+  <tbody>
+    <tr><td><code>AuthModule</code></td><td>Login, renovação e fim de sessão, troca de senha. Regista os guards globais <code>JwtAuthGuard</code> e <code>RolesGuard</code>.</td></tr>
+    <tr><td><code>UsersModule</code></td><td>Contas dos profissionais (só administrador) e perfil do próprio utilizador.</td></tr>
+    <tr><td><code>PatientsModule</code></td><td>Registo, edição e arquivo de pacientes; cria a conta de acesso do paciente com senha provisória.</td></tr>
+    <tr><td><code>ConsultationsModule</code></td><td>Consultas normais e de retorno, triagem, marcação pelo paciente, aceitar/rejeitar/iniciar/concluir, fila de espera ordenada por prioridade.</td></tr>
+    <tr><td><code>PrescriptionsModule</code></td><td>Emissão de receitas e assinatura pelo médico emissor.</td></tr>
+    <tr><td><code>ExamsModule</code></td><td>Pedidos de exames, registo de resultados, análise automática (regras e IA), ocultação de resultados ao enfermeiro.</td></tr>
+    <tr><td><code>DoctorSchedulesModule</code></td><td>Agenda semanal de cada médico, médicos disponíveis e lista pública de especialidades.</td></tr>
+    <tr><td><code>JustificationsModule</code></td><td>Justificativos médicos associados a uma consulta.</td></tr>
+    <tr><td><code>NotificationsModule</code></td><td>Notificações por utilizador ou por perfil, persistidas e enviadas em tempo real por SSE.</td></tr>
+    <tr><td><code>AuditLogsModule</code></td><td>Registo e consulta da auditoria; regista também as exportações feitas no navegador.</td></tr>
+    <tr><td><code>AiModule</code></td><td>Funcionalidades de IA (secção 10).</td></tr>
+    <tr><td><code>PrismaModule</code></td><td>Serviço Prisma global, partilhado por todos os módulos.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.2 Ciclo de vida de um pedido</h2>
+<ol class="steps">
+  <li><b>Middleware</b> (<code>main.ts</code>): Helmet (cabeçalhos de segurança), <code>cookie-parser</code>, contexto do pedido, compressão (excepto SSE) e CORS restrito a <code>CORS_ORIGIN</code>.</li>
+  <li><b>Guards globais</b>, por esta ordem: <code>ThrottlerGuard</code> (100 pedidos/min por omissão), <code>JwtAuthGuard</code> (exige token, salvo rotas com <code>@Public()</code>) e <code>RolesGuard</code> (compara o perfil do utilizador com <code>@Roles(...)</code>).</li>
+  <li><b>ValidationPipe global</b>: valida o DTO, rejeita campos desconhecidos (<code>whitelist</code> + <code>forbidNonWhitelisted</code>) e converte tipos.</li>
+  <li><b>Controller → Service</b>: o serviço aplica as regras de negócio, usa o Prisma, regista a auditoria e emite notificações.</li>
+  <li><b>Resposta</b>: o <code>LoggingInterceptor</code> regista o pedido e o <code>HttpExceptionFilter</code> uniformiza os erros.</li>
+</ol>
+<p>Todas as rotas ficam sob <code>/api/v1</code> (prefixo global e versionamento por URI). A documentação interactiva Swagger está em <code>/api/docs</code>.</p>
+
+<h2>7.3 Autenticação e autorização</h2>
+<ul>
+  <li><b>Login</b> (<code>POST /auth/login</code>): valida e-mail e senha (bcrypt) e devolve um <b>access token</b> (15 min) no corpo. Guarda um <b>refresh token</b> (7 dias) num cookie <code>httpOnly</code>, inacessível a JavaScript.</li>
+  <li><b>Renovação</b> (<code>POST /auth/refresh</code>): o refresh token é rodado a cada uso, e a base de dados guarda apenas o seu hash (<code>User.hashedRefreshToken</code>). O frontend chama-o automaticamente quando recebe 401 e quando a página é recarregada.</li>
+  <li><b>Senhas provisórias</b>: contas criadas pelo administrador ou pelo enfermeiro, e senhas repostas, recebem uma senha gerada sem caracteres ambíguos e <code>mustChangePassword = true</code>. O utilizador tem de a trocar no primeiro login.</li>
+  <li><b>Política de senhas</b> (<code>common/password-policy.ts</code>): mínimo de 8 caracteres, com pelo menos uma letra e um número.</li>
+  <li><b>Decorators</b>: <code>@Public()</code> dispensa autenticação; <code>@Roles(Role.MEDICO, …)</code> restringe por perfil (ao nível da classe ou do método); <code>@CurrentUser()</code> injecta o utilizador autenticado.</li>
+  <li><b>Contas desactivadas</b> (<code>deactivatedAt</code>) não conseguem autenticar-se. As contas nunca são apagadas, para preservar a autoria clínica e a auditoria.</li>
+</ul>
+
+<h2>7.4 Regras de negócio principais</h2>
+<ul>
+  <li>Só enfermeiro e administrador registam pacientes. O registo cria a conta do paciente; o paciente nunca se auto-regista.</li>
+  <li>Só médico e administrador criam consultas normais e de retorno. A triagem (enfermeiro) cria a consulta em estado <code>AGUARDANDO</code>.</li>
+  <li>Transições de estado da consulta: <code>AGENDADA</code> → aceitar (atribui o médico) ou rejeitar (<code>CANCELADA</code>); <code>AGENDADA</code>/<code>AGUARDANDO</code> → iniciar (<code>EM_ANDAMENTO</code>) → concluir (<code>CONCLUIDA</code>). A API recusa transições inválidas.</li>
+  <li>A fila de espera do médico ordena por prioridade de triagem (vermelho → azul) e depois por hora de chegada.</li>
+  <li>O paciente só pode marcar com médicos que tenham agenda activa na especialidade escolhida, dentro do horário definido (validado no fuso <code>CLINIC_TIMEZONE</code>).</li>
+  <li>Só o médico que emitiu uma receita a pode assinar.</li>
+  <li>O enfermeiro nunca vê resultados de exames: a listagem remove <code>result</code>, <code>resultDate</code> e a análise da IA quando o pedido vem de um <code>ENFERMEIRO</code>. Só médico e administrador registam resultados.</li>
+  <li>Um justificativo médico só pode ser emitido a partir de uma consulta <code>EM_ANDAMENTO</code> ou <code>CONCLUIDA</code>.</li>
+  <li>Os pacientes não se apagam: são arquivados (<code>archivedAt</code>) e saem das listagens.</li>
+</ul>
+<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/06-estados-consulta.png" style="max-height:80mm"><figcaption>Máquina de estados da consulta.</figcaption></figure>
+
+<h2>7.5 Notificações em tempo real</h2>
+<p>O <code>NotificationsService</code> grava cada notificação na tabela <code>notifications</code> e envia-a pelo canal <b>Server-Sent Events</b> <code>GET /notifications/stream</code>. As notificações podem ser dirigidas a um utilizador (<code>notifyUser</code>) ou a um perfil inteiro (<code>notifyRole</code>, por exemplo "novo paciente em triagem" para todos os médicos). O <code>NotificationContext</code> do frontend mantém a ligação aberta e actualiza o sino da barra superior.</p>
+<div class="note"><b>Limitação conhecida</b>As ligações SSE vivem na memória do processo. Com mais do que uma instância da API (escalonamento horizontal), é preciso um canal partilhado, como Redis pub/sub.</div>
+
+<h2>7.6 Auditoria</h2>
+<p>O <code>AuditLogsService.log(actor, acção, recurso, id)</code> grava o utilizador, o nome, a acção, o recurso, o identificador, a data/hora e o IP. É chamado pelos serviços em todas as acções críticas: autenticação, consultas, receitas, exames, consultas ao prontuário, gestão de utilizadores, exportações e cada utilização da IA. Exemplos de acções: <code>LOGIN</code>, <code>CONSULTOU_PRONTUARIO</code>, <code>ACEITOU_CONSULTA</code>, <code>FEZ_UPLOAD_RECEITA</code>, <code>ASSINOU_RECEITA_COM_ALERTA_IA</code>, <code>IA_SUGERIU_PRIORIDADE</code>. A tabela usa <code>onDelete: Restrict</code> sobre o utilizador, por isso os registos não se perdem.</p>
+
+<h1>8. Referência da API</h1>
+<p>Prefixo <code>/api/v1</code>. Todas as rotas exigem <code>Authorization: Bearer &lt;token&gt;</code>, excepto as marcadas como públicas. Os corpos e as respostas detalhados estão no Swagger (<code>/api/docs</code>).</p>
+<table>
+  <thead><tr><th style="width:8%">Método</th><th style="width:36%">Rota</th><th style="width:24%">Perfis</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td><code>/auth/login</code></td><td>público</td><td>Iniciar sessão</td></tr>
+    <tr><td>POST</td><td><code>/auth/refresh</code></td><td>público (cookie)</td><td>Renovar o access token</td></tr>
+    <tr><td>POST</td><td><code>/auth/logout</code></td><td>autenticado</td><td>Terminar sessão</td></tr>
+    <tr><td>POST</td><td><code>/auth/change-password</code></td><td>autenticado</td><td>Trocar a senha</td></tr>
+    <tr><td>GET/PATCH</td><td><code>/users/me</code></td><td>autenticado</td><td>Perfil próprio (nome, foto)</td></tr>
+    <tr><td>GET/POST</td><td><code>/users</code></td><td>Admin</td><td>Listar / criar utilizadores</td></tr>
+    <tr><td>GET/PATCH/DELETE</td><td><code>/users/:id</code></td><td>Admin</td><td>Ver / editar / desactivar</td></tr>
+    <tr><td>POST</td><td><code>/users/:id/reset-password</code></td><td>Admin</td><td>Repor senha (provisória)</td></tr>
+    <tr><td>GET/PATCH</td><td><code>/patients/me</code></td><td>Paciente</td><td>Dados próprios</td></tr>
+    <tr><td>GET</td><td><code>/patients</code>, <code>/patients/:id</code></td><td>Admin, Médico, Enfermeiro</td><td>Listar / ver paciente</td></tr>
+    <tr><td>POST/PATCH</td><td><code>/patients</code>, <code>/patients/:id</code></td><td>Admin, Enfermeiro</td><td>Registar (cria a conta) / editar</td></tr>
+    <tr><td>DELETE</td><td><code>/patients/:id</code></td><td>Admin, Enfermeiro</td><td>Arquivar paciente</td></tr>
+    <tr><td>GET</td><td><code>/consultations</code>, <code>/:id</code></td><td>Admin, Médico, Enfermeiro</td><td>Listar / ver consultas</td></tr>
+    <tr><td>GET</td><td><code>/consultations/me</code></td><td>Paciente</td><td>Consultas próprias</td></tr>
+    <tr><td>GET</td><td><code>/consultations/waiting-queue</code></td><td>Médico, Admin</td><td>Fila ordenada por prioridade</td></tr>
+    <tr><td>POST</td><td><code>/consultations</code></td><td>Médico, Admin</td><td>Criar consulta (normal ou retorno)</td></tr>
+    <tr><td>POST</td><td><code>/consultations/triage</code></td><td>Enfermeiro, Admin</td><td>Registar triagem (cria consulta AGUARDANDO)</td></tr>
+    <tr><td>POST</td><td><code>/consultations/book</code></td><td>Paciente</td><td>Marcar consulta</td></tr>
+    <tr><td>PATCH</td><td><code>/consultations/:id/accept</code>, <code>/reject</code></td><td>Médico</td><td>Aceitar / rejeitar</td></tr>
+    <tr><td>PATCH</td><td><code>/consultations/:id/start</code>, <code>/complete</code></td><td>Médico, Admin</td><td>Iniciar / concluir (diagnóstico, CID-10)</td></tr>
+    <tr><td>GET/POST</td><td><code>/prescriptions</code>, <code>/:id</code></td><td>Médico, Admin</td><td>Listar / emitir receitas</td></tr>
+    <tr><td>PATCH</td><td><code>/prescriptions/:id/sign</code></td><td>Médico, Admin</td><td>Assinar (só o emissor)</td></tr>
+    <tr><td>GET</td><td><code>/prescriptions/me</code></td><td>Paciente</td><td>Receitas próprias</td></tr>
+    <tr><td>GET</td><td><code>/exams</code>, <code>/exams/:id</code></td><td>Admin, Médico, Enfermeiro</td><td>Listar exames (sem resultados para o enfermeiro)</td></tr>
+    <tr><td>POST</td><td><code>/exams</code></td><td>Médico, Admin</td><td>Solicitar exame</td></tr>
+    <tr><td>PATCH</td><td><code>/exams/:id/result</code></td><td>Médico, Admin</td><td>Registar resultado (dispara a análise)</td></tr>
+    <tr><td>GET</td><td><code>/exams/me</code></td><td>Paciente</td><td>Exames próprios</td></tr>
+    <tr><td>GET/PUT</td><td><code>/doctor-schedules/me</code></td><td>Médico</td><td>Ver / gravar a agenda</td></tr>
+    <tr><td>GET</td><td><code>/doctor-schedules/available</code></td><td>autenticado</td><td>Médicos com agenda activa</td></tr>
+    <tr><td>GET</td><td><code>/doctor-schedules/specialties</code></td><td>público</td><td>Especialidades disponíveis</td></tr>
+    <tr><td>POST</td><td><code>/justifications</code></td><td>Médico</td><td>Emitir justificativo</td></tr>
+    <tr><td>GET</td><td><code>/justifications/me</code></td><td>Paciente</td><td>Justificativos próprios</td></tr>
+    <tr><td>GET</td><td><code>/notifications/me</code></td><td>autenticado</td><td>Notificações</td></tr>
+    <tr><td>SSE</td><td><code>/notifications/stream</code></td><td>autenticado</td><td>Canal em tempo real</td></tr>
+    <tr><td>PATCH</td><td><code>/notifications/read-all</code>, <code>/:id/read</code></td><td>autenticado</td><td>Marcar como lidas</td></tr>
+    <tr><td>DELETE</td><td><code>/notifications</code></td><td>autenticado</td><td>Limpar notificações</td></tr>
+    <tr><td>GET</td><td><code>/audit-logs</code></td><td>Admin</td><td>Consultar auditoria</td></tr>
+    <tr><td>POST</td><td><code>/audit-logs/exports</code></td><td>todos</td><td>Registar uma exportação feita no navegador</td></tr>
+    <tr><td>GET</td><td><code>/ai/status</code></td><td>Médico, Enfermeiro, Admin</td><td>Indica se a IA está activa</td></tr>
+    <tr><td>POST</td><td><code>/ai/triage-priority</code></td><td>Enfermeiro, Admin</td><td>Sugestão de prioridade de triagem</td></tr>
+    <tr><td>GET</td><td><code>/ai/patients/:id/summary</code></td><td>Médico</td><td>Resumo pré-consulta</td></tr>
+    <tr><td>POST</td><td><code>/ai/prescription-assistant</code></td><td>Médico</td><td>Mensagem para o assistente</td></tr>
+    <tr><td>GET/DELETE</td><td><code>/ai/conversations[/:id]</code></td><td>Médico</td><td>Histórico de conversas</td></tr>
+    <tr><td>POST</td><td><code>/ai/prescriptions/:id/check</code></td><td>Médico</td><td>Verificação da receita</td></tr>
+    <tr><td>POST</td><td><code>/ai/exams/:id/interpret</code></td><td>Médico</td><td>Interpretação de exame</td></tr>
+    <tr><td>POST</td><td><code>/ai/icd10</code></td><td>Médico</td><td>Sugestão de códigos CID-10</td></tr>
+  </tbody>
+</table>
+<div class="note"><b>Limites</b>Os endpoints <code>/ai/*</code> têm um limite próprio de 20 pedidos por minuto por utilizador; o resto da API tem 100 pedidos por minuto.</div>
+
+<h1>9. Base de dados</h1>
+<h2>9.1 Modelo de domínio</h2>
+<p>O ficheiro <code>prisma/schema.prisma</code> é a fonte de verdade. O diagrama seguinte representa-o em UML.</p>
+<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/02-classes.png"><figcaption>Diagrama de classes do domínio (equivalente ao esquema Prisma).</figcaption></figure>
+<table>
+  <thead><tr><th style="width:20%">Modelo (tabela)</th><th>Descrição e regras de integridade</th></tr></thead>
+  <tbody>
+    <tr><td><code>User</code> (users)</td><td>Todos os utilizadores; <code>role</code> define o perfil; <code>email</code> único; soft delete por <code>deactivatedAt</code>.</td></tr>
+    <tr><td><code>Patient</code> (patients)</td><td>Ficha do paciente; <code>bi</code> e <code>email</code> únicos; <code>allergies</code> é uma lista; arquivado por <code>archivedAt</code>.</td></tr>
+    <tr><td><code>Consultation</code></td><td>Consulta (normal, retorno ou triagem); estado, diagnóstico, notas, CID-10, prioridade de triagem e a sua origem. Paciente com <code>onDelete: Restrict</code>.</td></tr>
+    <tr><td><code>VitalSigns</code></td><td>Sinais vitais e sintomas de uma consulta (1:0..1, apagados com a consulta).</td></tr>
+    <tr><td><code>Prescription</code> / <code>Medication</code></td><td>Receita e os seus medicamentos (composição, cascade); estado <code>PENDENTE</code> ou <code>EMITIDA</code>.</td></tr>
+    <tr><td><code>Exam</code></td><td>Pedido, estado, resultado e campos da análise automática (<code>aiCritical</code>, <code>aiFlags</code>, <code>aiInterpretation</code>, <code>aiAnalyzedAt</code>).</td></tr>
+    <tr><td><code>DoctorSchedule</code></td><td>Disponibilidade semanal do médico, em JSON <code>{dia: {active, start, end}}</code>.</td></tr>
+    <tr><td><code>Justification</code></td><td>Justificativo médico ligado a uma consulta.</td></tr>
+    <tr><td><code>Notification</code></td><td>Para um utilizador (<code>recipientUserId</code>) ou para um perfil (<code>recipientRole</code>).</td></tr>
+    <tr><td><code>AuditLog</code></td><td>Registo de auditoria, imutável na prática.</td></tr>
+    <tr><td><code>AiConversation</code></td><td>Conversas do assistente, privadas de cada médico; mensagens em JSON.</td></tr>
+  </tbody>
+</table>
+<h2>9.2 Enumerações</h2>
+<table>
+  <thead><tr><th style="width:26%">Enumeração</th><th>Valores</th></tr></thead>
+  <tbody>
+    <tr><td><code>Role</code></td><td>ADMIN, MEDICO, ENFERMEIRO, PACIENTE</td></tr>
+    <tr><td><code>ConsultationStatus</code></td><td>AGENDADA, AGUARDANDO, EM_ANDAMENTO, CONCLUIDA, CANCELADA</td></tr>
+    <tr><td><code>TriagePriority</code></td><td>VERMELHO, LARANJA, AMARELO, VERDE, AZUL</td></tr>
+    <tr><td><code>TriagePrioritySource</code></td><td>IA_CONFIRMADA, IA_ALTERADA, REGRAS, MANUAL</td></tr>
+    <tr><td><code>PrescriptionStatus</code></td><td>PENDENTE, EMITIDA</td></tr>
+    <tr><td><code>ExamStatus</code></td><td>SOLICITADO, EM_ANALISE, CONCLUIDO</td></tr>
+    <tr><td><code>Gender</code></td><td>M, F</td></tr>
+  </tbody>
+</table>
+<h2>9.3 Migrações</h2>
+<table>
+  <thead><tr><th style="width:48%">Migração</th><th>Conteúdo</th></tr></thead>
+  <tbody>
+    <tr><td><code>20260810234452_init</code></td><td>Esquema inicial</td></tr>
+    <tr><td><code>20260810234835_add_refresh_token</code></td><td>Hash do refresh token no utilizador</td></tr>
+    <tr><td><code>20261029154339_soft_delete_and_password_policy</code></td><td>Desactivação de contas, arquivo de pacientes, senha provisória</td></tr>
+    <tr><td><code>20261029163636_ai_clinical_support</code></td><td>Prioridade de triagem, CID-10, análise de exames</td></tr>
+    <tr><td><code>20261029170404_ai_conversations</code></td><td>Conversas do assistente de IA</td></tr>
+  </tbody>
+</table>
+<p>Em desenvolvimento usa-se <code>npm run prisma:migrate</code>, que cria uma nova migração a partir das alterações ao <code>schema.prisma</code>. Em produção usa-se <code>npx prisma migrate deploy</code>, que só aplica as migrações existentes. Nunca se editam migrações já aplicadas.</p>
+
+<h1>10. Módulo de inteligência artificial</h1>
+<p>O <code>AiModule</code> implementa seis funcionalidades de apoio à decisão clínica com modelos Google Gemini: triagem, resumo pré-consulta, assistente de prescrição, verificação da receita, interpretação de exames e sugestão de CID-10. Princípio central: <b>a IA sugere, o profissional decide</b>, e regras determinísticas locais funcionam mesmo sem IA.</p>
+<h2>10.1 Componentes</h2>
+<table>
+  <thead><tr><th style="width:24%">Ficheiro</th><th>Responsabilidade</th></tr></thead>
+  <tbody>
+    <tr><td><code>ai.controller.ts</code></td><td>Endpoints <code>/ai/*</code>, perfis e limite de 20 pedidos/min.</td></tr>
+    <tr><td><code>ai.service.ts</code></td><td>As seis funcionalidades: combina regras e IA, grava os resultados e regista a auditoria.</td></tr>
+    <tr><td><code>gemini.client.ts</code></td><td>Comunicação com a API Gemini: cadeia de modelos de reserva, timeout de 25 s por modelo, pausa de 3 min de modelos que falham, respostas JSON com esquema.</td></tr>
+    <tr><td><code>clinical-context.ts</code></td><td>Constrói o contexto clínico <b>anonimizado</b>: idade, sexo, grupo sanguíneo, alergias, sinais vitais, diagnósticos, medicação e exames recentes.</td></tr>
+    <tr><td><code>clinical-rules.ts</code></td><td>Regras determinísticas: prioridade mínima por sinais vitais (<code>triageFloor</code>), conflitos de alergia por classe de fármaco (<code>allergyConflicts</code>) e valores laboratoriais de pânico.</td></tr>
+  </tbody>
+</table>
+<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/04-seq-triagem-ia.png" style="max-height:120mm"><figcaption>Sequência de um pedido de IA: triagem com prioridade mínima por regras.</figcaption></figure>
+<h2>10.2 Regras clínicas (resumo)</h2>
+<ul>
+  <li><b>Triagem</b>: a prioridade final é sempre a mais urgente entre a da IA e a calculada pelos sinais vitais (por exemplo, SpO₂ &lt; 90% impõe no mínimo laranja). A IA pode subir a prioridade, nunca descê-la.</li>
+  <li><b>Alergias</b>: cruzamento por classes (penicilinas, AINE/aspirina, sulfonamidas, …), sem falsos positivos por semelhança de nome (por exemplo, "ácido fólico" não é confundido com "ácido acetilsalicílico").</li>
+  <li><b>Valores de pânico</b>: hemoglobina, plaquetas, leucócitos, potássio, sódio, glicemia e cálcio, com vírgula decimal, separadores de milhares e conversão de unidades. Prevalecem sobre a IA.</li>
+</ul>
+<p>Os limiares estão todos em <code>clinical-rules.ts</code> para facilitar a revisão pela direcção clínica antes do uso em produção.</p>
+<h2>10.3 Fiabilidade</h2>
+<ul>
+  <li>Cadeia de modelos configurável (<code>GEMINI_MODEL</code> e <code>GEMINI_FALLBACK_MODELS</code>); um modelo que falha (sobrecarga, limite ou timeout) fica em pausa 3 minutos e passa para o fim da fila.</li>
+  <li>Análise de exames em segundo plano, com novas tentativas após 30 s, 2 min e 5 min.</li>
+  <li>Degradação graciosa: sem IA, a triagem usa as regras, a verificação cruza as alergias e o assistente mostra uma mensagem clara.</li>
+  <li>Cache do resumo pré-consulta até 6 horas, invalidada quando o prontuário muda.</li>
+  <li>Envio apenas das 20 últimas mensagens da conversa do assistente.</li>
+</ul>
+<h2>10.4 Privacidade</h2>
+<p>O modelo nunca recebe nome, BI, telefone, e-mail, morada, contacto de emergência, dados do médico ou credenciais. Um teste automático garante que o contexto enviado contém as alergias mas não estes dados. A chave existe apenas no servidor.</p>
+<div class="warn"><b>Antes de usar com dados reais</b>No plano gratuito da API Gemini, a Google pode usar o conteúdo dos pedidos para melhorar os seus produtos. Para dados de pacientes é obrigatório activar a facturação (plano pago) no projecto Google Cloud e garantir que o consentimento informado cobre o uso de IA.</div>
+
+<h1>11. Frontend (React)</h1>
+<h2>11.1 Rotas e perfis</h2>
+<table>
+  <thead><tr><th style="width:24%">Rota</th><th style="width:26%">Página</th><th>Perfis</th></tr></thead>
+  <tbody>
+    <tr><td><code>/login</code></td><td>LoginPage</td><td>público</td></tr>
+    <tr><td><code>/dashboard</code></td><td>DashboardPage</td><td>todos (conteúdo por perfil)</td></tr>
+    <tr><td><code>/patients</code>, <code>/patients/:id</code></td><td>PatientsPage, PatientDetailPage</td><td>Admin, Médico, Enfermeiro</td></tr>
+    <tr><td><code>/consultations</code></td><td>ConsultationsPage</td><td>Admin, Médico, Enfermeiro</td></tr>
+    <tr><td><code>/prescriptions</code></td><td>PrescriptionsPage</td><td>Admin, Médico</td></tr>
+    <tr><td><code>/exams</code></td><td>ExamsPage</td><td>Admin, Médico, Enfermeiro</td></tr>
+    <tr><td><code>/history</code></td><td>HistoryPage</td><td>Admin, Médico, Enfermeiro</td></tr>
+    <tr><td><code>/nurse</code></td><td>NursePage (triagem)</td><td>Enfermeiro, Admin</td></tr>
+    <tr><td><code>/agenda</code></td><td>AgendaPage</td><td>Médico</td></tr>
+    <tr><td><code>/admin</code>, <code>/logs</code></td><td>AdminPage, LogsPage</td><td>Admin</td></tr>
+    <tr><td><code>/portal</code></td><td>PatientPortalPage</td><td>Paciente</td></tr>
+    <tr><td><code>/profile</code></td><td>ProfilePage</td><td>todos</td></tr>
+  </tbody>
+</table>
+<p>O componente <code>ProtectedRoute</code> (em <code>App.tsx</code>) redirecciona para <code>/login</code> sem sessão e bloqueia perfis não autorizados. Esta protecção é apenas de interface: a autorização efectiva é feita pela API.</p>
+<h2>11.2 Estado global</h2>
+<ul>
+  <li><b>AuthContext</b>: utilizador autenticado, <code>login</code>/<code>logout</code>, troca de senha e <code>can(permissão)</code> para mostrar ou ocultar opções. Ao abrir a aplicação, recupera a sessão a partir do cookie de refresh.</li>
+  <li><b>NotificationContext</b>: lista de notificações e ligação SSE.</li>
+  <li><b>ThemeContext</b>: tema claro ou escuro.</li>
+  <li><b>ToastContext</b>: mensagens transitórias de sucesso e erro.</li>
+</ul>
+<h2>11.3 Cliente da API</h2>
+<p><code>services/apiClient.ts</code> centraliza os pedidos: junta o access token (guardado só em memória), envia o cookie (<code>credentials: 'include'</code>), tenta uma renovação automática ao receber 401 e repete o pedido, e converte erros em <code>ApiError</code>. Cada recurso tem o seu módulo em <code>services/api/</code>, com funções tipadas.</p>
+<h2>11.4 Exportações e impressão</h2>
+<p>O <code>ExportMenu</code> gera ficheiros Excel (ExcelJS) e PDF (jsPDF + autoTable) no próprio navegador, a partir das colunas definidas em <code>utils/exportColumns.ts</code>, e regista cada exportação na auditoria. <code>utils/printDocuments.ts</code> produz receitas e justificativos para impressão e assinatura.</p>
+<h2>11.5 Componentes de IA</h2>
+<p><code>AiAssistant</code> (painel flutuante do médico), <code>AiPatientSummary</code> (resumo na ficha), <code>PrescriptionSafetyModal</code> (verificação antes de assinar), <code>ExamInsightModal</code> (interpretação) e <code>TriageBadge</code> (cor de Manchester). Todos identificam visualmente o conteúdo gerado por IA e lembram que a decisão é clínica.</p>
+
+<h1>12. Testes</h1>
+<table>
+  <thead><tr><th style="width:26%">Projecto</th><th style="width:26%">Comando</th><th>Âmbito</th></tr></thead>
+  <tbody>
+    <tr><td>Backend (Jest)</td><td><code>npm test</code></td><td>Serviços de autenticação, consultas, prescrições, exames, agenda, justificativos e IA. Cerca de 40 testes cobrem as regras clínicas e a IA, com respostas Gemini simuladas.</td></tr>
+    <tr><td>Backend (e2e)</td><td><code>npm run test:e2e</code></td><td>Arranque da aplicação e rotas principais.</td></tr>
+    <tr><td>Frontend (Vitest)</td><td><code>npm test</code></td><td>AuthContext, cliente da API, exportações e renderização de Markdown.</td></tr>
+  </tbody>
+</table>
+<p>O que os testes de IA garantem: o contexto enviado não contém dados identificativos; a IA não baixa a prioridade abaixo do piso; as alergias são detectadas com a IA em baixo; os valores de pânico mantêm o exame crítico; a cadeia de reserva funciona em caso de sobrecarga e timeout; um médico não acede às conversas de outro; o enfermeiro não vê a análise de exames.</p>
+
+<h1>13. Segurança</h1>
+<table>
+  <thead><tr><th style="width:28%">Ameaça</th><th>Mitigação no LeeVida</th></tr></thead>
+  <tbody>
+    <tr><td>Acesso indevido</td><td>JWT obrigatório; RBAC no servidor em todas as rotas; regras finas nos serviços (assinatura pelo emissor, dados <code>/me</code> identificados pelo token).</td></tr>
+    <tr><td>Roubo de sessão</td><td>Access token de 15 min só em memória; refresh token em cookie <code>httpOnly</code>, rodado e guardado como hash.</td></tr>
+    <tr><td>Senhas fracas ou expostas</td><td>bcrypt; política de 8+ caracteres com letras e números; senhas provisórias de troca obrigatória.</td></tr>
+    <tr><td>Força bruta e abuso</td><td>Rate limiting global (100/min) e próprio da IA (20/min).</td></tr>
+    <tr><td>Injecção e dados inválidos</td><td>ValidationPipe com whitelist; Prisma com consultas parametrizadas.</td></tr>
+    <tr><td>Ataques no navegador</td><td>Helmet (cabeçalhos HTTP), CORS restrito à origem do frontend.</td></tr>
+    <tr><td>Fuga de dados clínicos</td><td>Ocultação de resultados ao enfermeiro; IA com dados anonimizados; auditoria de consultas ao prontuário e exportações.</td></tr>
+    <tr><td>Perda de histórico</td><td>Sem eliminação de pacientes nem de contas (arquivo e desactivação); <code>onDelete: Restrict</code>.</td></tr>
+  </tbody>
+</table>
+
+<h1>14. Implantação em produção</h1>
+<figure class="diagram"><img src="file:///C:/TCC-Nancy/leevida-tcc/artefactos/uml/imagens/08-implantacao.png" style="max-height:110mm"><figcaption>Diagrama de implantação recomendado.</figcaption></figure>
+<ol class="steps">
+  <li><b>Servidor</b>: Linux (ou Windows Server) com 2 vCPU, 4 GB de RAM e 40 GB SSD, local na clínica ou alugado na nuvem. Instalar Node.js 20+, PostgreSQL 16+ e um proxy reverso (Nginx ou Caddy).</li>
+  <li><b>Base de dados</b>: criar utilizador e base próprios, sem acesso pela rede externa.</li>
+  <li><b>API</b>: <code>npm ci</code>, <code>npx prisma migrate deploy</code>, <code>npm run build</code> e executar <code>node dist/main</code> com um gestor de processos (systemd ou PM2). Definir <code>NODE_ENV=production</code>, segredos JWT novos, <code>CORS_ORIGIN</code> com o domínio real e <code>TRUST_PROXY=1</code>.</li>
+  <li><b>Frontend</b>: <code>VITE_API_URL=https://dominio/api/v1 npm run build</code> e servir a pasta <code>dist/</code> pelo proxy, com fallback para <code>index.html</code>.</li>
+  <li><b>HTTPS</b>: certificado TLS (por exemplo, Let's Encrypt) no proxy. Desactivar a compressão para o caminho SSE <code>/api/v1/notifications/stream</code>, ou garantir que o proxy não faz buffering.</li>
+  <li><b>Não correr o seed</b> em produção. Criar o primeiro administrador manualmente e desactivar as contas de demonstração.</li>
+  <li><b>Cópias de segurança</b>: <code>pg_dump</code> diário, cifrado e guardado fora do servidor, com teste periódico de reposição.</li>
+  <li><b>IA</b>: activar a facturação da API Gemini e configurar <code>GEMINI_API_KEY</code>.</li>
+</ol>
+<div class="note"><b>Itens pendentes conhecidos</b>Paginação nas listagens, fotos de perfil em armazenamento de ficheiros (hoje em base64 na base de dados), Redis para notificações com várias instâncias, sessão única por utilizador, monitorização de erros, testes ponta a ponta no navegador e recuperação de senha por e-mail (exige SMTP). Para produção, convém também ocultar o Swagger.</div>
+
+<h1>15. Guias práticos de evolução</h1>
+<h2>15.1 Acrescentar um campo à base de dados</h2>
+<ol class="steps">
+  <li>Editar o modelo em <code>prisma/schema.prisma</code>.</li>
+  <li><code>npx prisma migrate dev --name descricao_curta</code>: gera a migração e actualiza o cliente.</li>
+  <li>Acrescentar o campo ao DTO (com validações <code>class-validator</code>) e ao serviço.</li>
+  <li>Acrescentar o campo ao tipo em <code>leevida-front-end/src/types</code> e ao formulário ou listagem.</li>
+  <li>Se o campo for exportável, acrescentá-lo a <code>utils/exportColumns.ts</code>.</li>
+</ol>
+<h2>15.2 Acrescentar um endpoint</h2>
+<pre><code>// exams.controller.ts
+@Roles(Role.MEDICO, Role.ADMIN)
+@Patch(':id/cancel')
+cancel(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+  return this.examsService.cancel(id, user);
+}
+
+// exams.service.ts
+async cancel(id: string, actor: RequestUser) {
+  const exam = await this.findById(id);              // lança 404 se não existir
+  if (exam.status === 'CONCLUIDO') throw new ForbiddenException('Exame já concluído');
+  const updated = await this.prisma.exam.update({ where: { id }, data: { status: 'CANCELADO' } });
+  await this.auditLogsService.log(actor, 'CANCELOU_EXAME', 'exam', id);
+  return updated;
+}</code></pre>
+<p>O exemplo é ilustrativo: o estado <code>CANCELADO</code> exigiria acrescentá-lo primeiro à enumeração <code>ExamStatus</code> (guia 15.1). Depois, acrescentar a função em <code>services/api/exams.ts</code> no frontend e um teste no <code>*.service.spec.ts</code>.</p>
+<h2>15.3 Acrescentar uma página</h2>
+<ol class="steps">
+  <li>Criar <code>src/pages/NovaPage.tsx</code>.</li>
+  <li>Registar a rota em <code>App.tsx</code> dentro de <code>DashboardLayout</code>, com <code>&lt;ProtectedRoute roles={[...]}&gt;</code>.</li>
+  <li>Acrescentar a entrada no menu em <code>layouts/Sidebar.tsx</code> para os perfis certos.</li>
+</ol>
+<h2>15.4 Ajustar regras clínicas</h2>
+<p>Alterar os limiares em <code>src/ai/clinical-rules.ts</code> e actualizar os testes em <code>ai.service.spec.ts</code>. Qualquer alteração deve ser validada pela direcção clínica.</p>
+
+<h1>16. Resolução de problemas</h1>
+<table>
+  <thead><tr><th style="width:34%">Sintoma</th><th>Causa provável e solução</th></tr></thead>
+  <tbody>
+    <tr><td><code>EADDRINUSE :3000</code> ao arrancar a API</td><td>Outra aplicação usa a porta. Usar <code>PORT=3001</code> e ajustar <code>VITE_API_URL</code> e <code>CORS_ORIGIN</code>.</td></tr>
+    <tr><td>Erros de CORS no navegador</td><td>O Vite mudou para outra porta (5174) porque a 5173 estava ocupada. Arrancar com <code>npx vite --strictPort</code> ou alinhar <code>CORS_ORIGIN</code>.</td></tr>
+    <tr><td>Sessão perdida ao recarregar a página</td><td>O cookie de refresh não é enviado: confirmar que o frontend e a API usam o mesmo esquema (http/https) e que <code>CORS_ORIGIN</code> está correcto.</td></tr>
+    <tr><td><code>P1001</code> do Prisma</td><td>PostgreSQL inacessível: verificar se o serviço ou contentor está a correr e a porta em <code>DATABASE_URL</code>.</td></tr>
+    <tr><td>IA responde "indisponível"</td><td>Sem <code>GEMINI_API_KEY</code>, limite de pedidos atingido, ou todos os modelos em sobrecarga (503). O sistema continua com as regras locais; tentar de novo mais tarde.</td></tr>
+    <tr><td>Notificações não chegam em tempo real</td><td>Proxy a comprimir ou a fazer buffering do SSE. Desactivar para <code>/notifications/stream</code>.</td></tr>
+    <tr><td>Processo do servidor de desenvolvimento não termina (Windows)</td><td>Terminar pelo PID: <code>netstat -ano | findstr :3000</code> e <code>taskkill /PID &lt;pid&gt; /F</code>.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
