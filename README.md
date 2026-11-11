@@ -20,6 +20,16 @@ Este repositório reúne a monografia e todos os artefactos produzidos no trabal
 | [Manual do Programador](manuais/LeeVida-Manual-do-Programador.pdf) | Quem instala, mantém ou evolui o sistema: arquitectura, código, API, base de dados, IA, testes, segurança e implantação |
 | [Manual do Utilizador](manuais/LeeVida-Manual-do-Utilizador.pdf) | Administradores, médicos, enfermeiros e pacientes: guia passo a passo com capturas de ecrã |
 
+## Código-fonte
+
+| Repositório | Conteúdo |
+|---|---|
+| [Nancylee4/leevida-backend](https://github.com/Nancylee4/leevida-backend) | API REST (NestJS, Prisma, PostgreSQL, JWT, módulo de IA) |
+| [Nancylee4/front-end](https://github.com/Nancylee4/front-end) | Aplicação web (React, TypeScript, Vite, Tailwind CSS) |
+| [Nancylee4/leevida-tcc](https://github.com/Nancylee4/leevida-tcc) | Este repositório: monografia, manuais e artefactos |
+
+Instruções de instalação e execução no [Manual do Programador](manuais/LeeVida-Manual-do-Programador.pdf).
+
 ## Estrutura
 
 ```
