@@ -25,6 +25,7 @@ package "Camada de Negócio (servidor Node.js)" as L2 {
     component "ExamsModule" as Ex
     component "NotificationsModule" as Notif
     component "AuditLogsModule" as Audit
+    component "StatsModule\n(indicadores agregados)" as Stats
     component "AiModule" as AiM
     component "PrismaModule" as Prisma
   }
@@ -61,6 +62,7 @@ Pat ..> Prisma
 Users ..> Prisma
 Auth ..> Users
 Audit ..> Prisma
+Stats ..> Prisma
 
 Prisma ..> SQL
 SQL -- PG

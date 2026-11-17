@@ -2,19 +2,26 @@
 !include skin.iuml
 hide empty description
 
-state "AGENDADA" as AG
-state "AGUARDANDO" as AW
+state "AGENDADA" as AG : pedido à espera\nde resposta do médico
+state "CONFIRMADA" as CF : aceite pelo médico
+state "AGUARDANDO" as AW : triada, na fila\n(ordenada por prioridade)
 state "EM_ANDAMENTO" as EA
 state "CONCLUIDA" as CO
 state "CANCELADA" as CA
+state "NAO_COMPARECEU" as NC
 
-[*] --> AG : marcar consulta\n(paciente) / criar consulta (médico)
+[*] --> AG : marcar consulta (paciente)
+[*] --> CF : criar consulta / retorno (médico)
 [*] --> AW : registar triagem (enfermeiro)
-AG --> AG : aceitar [médico atribuído]
-AG --> CA : rejeitar (médico)
-AG --> EA : iniciar atendimento
-AW --> EA : iniciar atendimento
+AG --> CF : aceitar (médico)
+AG --> CA : rejeitar (médico)\n/ cancelar (paciente)
+CF --> CA : cancelar (paciente ou\nmédico responsável)
+CF --> NC : registar falta (médico)\n[hora marcada já passou]
+CF --> EA : iniciar atendimento\n(médico responsável)
+AW --> EA : iniciar atendimento (médico)
+AW --> CA : paciente desistiu\n(enfermeiro ou médico)
 EA --> CO : concluir [diagnóstico registado]
 CO --> [*]
 CA --> [*]
+NC --> [*]
 @enduml

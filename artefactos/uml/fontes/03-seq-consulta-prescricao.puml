@@ -49,7 +49,7 @@ PC -> DB : criar Prescription (PENDENTE)\ne Medication[1..*]
 PC --> UI : 201 Prescription
 deactivate PC
 
-M -> UI : assinar(receita)
+M -> UI : validar(receita)
 UI -> AI : POST /ai/prescriptions/{id}/check
 activate AI
 AI -> DB : ler alergias e histórico\n(contexto anonimizado)
@@ -68,16 +68,16 @@ UI --> M : resultado da verificação
 opt nível = PERIGO
   M -> UI : confirmar que reviu os alertas
 end
-UI -> PC : PATCH /prescriptions/{id}/sign
+UI -> PC : PATCH /prescriptions/{id}/sign {safetyCheck}
 activate PC
-PC -> DB : estado = EMITIDA
-PC -> DB : registar AuditLog
-opt assinada com alerta PERIGO
-  PC -> DB : registar AuditLog\n(ASSINOU_RECEITA_COM_ALERTA_IA)
+PC -> DB : estado = EMITIDA, signedAt, safetyCheck
+PC -> DB : registar AuditLog (VALIDOU_RECEITA)
+opt validada com alerta PERIGO
+  PC -> DB : registar AuditLog\n(VALIDOU_RECEITA_COM_ALERTA)
 end
 PC -> DB : criar Notification para o paciente
 PC --> UI : 200 Prescription
 deactivate PC
-UI --> M : receita emitida
+UI --> M : receita validada e emitida
 deactivate UI
 @enduml

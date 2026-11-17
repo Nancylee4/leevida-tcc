@@ -22,31 +22,35 @@ rectangle "Sistema LeeVida" {
   usecase "UC02 Gerir perfil" as UC02
   usecase "UC03 Consultar notificações" as UC03
 
-  usecase "UC04 Gerir utilizadores" as UC04
+  usecase "UC04 Gerir utilizadores\n(criar, editar, desactivar,\nrepor senha)" as UC04
   usecase "UC05 Consultar logs\nde auditoria" as UC05
+  usecase "UC30 Consultar indicadores\nde gestão" as UC30
 
   usecase "UC06 Registar paciente" as UC06
   usecase "UC07 Emitir credenciais\ndo paciente" as UC07
-  usecase "UC08 Registar triagem" as UC08
+  usecase "UC08 Registar triagem\n--\nextension points:\nsugestão de prioridade" as UC08
   usecase "UC09 Sugerir prioridade\nde triagem (IA)" as UC09
 
   usecase "UC10 Gerir agenda" as UC10
   usecase "UC11 Aceitar ou rejeitar\nconsulta" as UC11
-  usecase "UC12 Consultar\nprontuário" as UC12
+  usecase "UC12 Consultar\nprontuário\n--\nextension points:\nabertura da ficha" as UC12
   usecase "UC13 Gerar resumo\npré-consulta (IA)" as UC13
-  usecase "UC14 Realizar consulta" as UC14
+  usecase "UC14 Realizar consulta\n--\nextension points:\nconclusão" as UC14
   usecase "UC15 Sugerir códigos\nCID-10 (IA)" as UC15
   usecase "UC16 Registar consulta\nde retorno" as UC16
   usecase "UC17 Emitir prescrição" as UC17
-  usecase "UC18 Assinar prescrição" as UC18
+  usecase "UC18 Validar prescrição\n(assinatura electrónica\nsimples)" as UC18
   usecase "UC19 Verificar segurança\nda receita" as UC19
   usecase "UC20 Utilizar assistente\nde prescrição (IA)" as UC20
   usecase "UC21 Solicitar exame" as UC21
-  usecase "UC22 Registar resultado\nde exame" as UC22
+  usecase "UC22 Registar resultado\nde exame\n--\nextension points:\nresultado gravado" as UC22
   usecase "UC23 Interpretar\nresultado (IA)" as UC23
   usecase "UC24 Emitir justificativo\nmédico" as UC24
 
   usecase "UC25 Marcar consulta" as UC25
+  usecase "UC27 Editar ou arquivar\npaciente" as UC27
+  usecase "UC28 Cancelar consulta" as UC28
+  usecase "UC29 Registar falta\ndo paciente" as UC29
   usecase "UC26 Consultar histórico,\nreceitas e exames próprios" as UC26
 }
 
@@ -56,9 +60,12 @@ U -- UC03
 
 A -- UC04
 A -- UC05
+A -- UC30
 
 E -- UC06
 E -- UC08
+E -- UC27
+E -- UC28
 
 M -- UC10
 M -- UC11
@@ -71,16 +78,19 @@ M -- UC20
 M -- UC21
 M -- UC22
 M -- UC24
+M -- UC28
+M -- UC29
 
 P -- UC25
 P -- UC26
+P -- UC28
 
 UC06 ..> UC07 : <<include>>
-UC08 <.. UC09 : <<extend>>
-UC12 <.. UC13 : <<extend>>
-UC14 <.. UC15 : <<extend>>
+UC08 <.. UC09 : <<extend>>\n[o enfermeiro pede sugestão]
+UC12 <.. UC13 : <<extend>>\n[serviço de IA disponível]
+UC14 <.. UC15 : <<extend>>\n[o médico pede sugestão]
 UC18 ..> UC19 : <<include>>
-UC22 <.. UC23 : <<extend>>
+UC22 <.. UC23 : <<extend>>\n[serviço de IA disponível]
 
 UC09 -- G
 UC13 -- G

@@ -5,7 +5,6 @@ skinparam ranksep 55
 hide empty methods
 
 class User {
-  - id : String
   - name : String
   - email : String {unique}
   - password : String
@@ -18,7 +17,6 @@ class User {
 }
 
 class Patient {
-  - id : String
   - name : String
   - dob : Date
   - gender : Gender
@@ -34,7 +32,6 @@ class Patient {
 }
 
 class Consultation {
-  - id : String
   - date : DateTime
   - reason : String
   - isReturn : Boolean
@@ -60,10 +57,11 @@ class VitalSigns {
 }
 
 class Prescription {
-  - id : String
   - date : DateTime
   - instructions : String
   - status : PrescriptionStatus
+  - signedAt : DateTime [0..1]
+  - safetyCheck : PrescriptionSafetyCheck [0..1]
 }
 
 class Medication {
@@ -74,7 +72,6 @@ class Medication {
 }
 
 class Exam {
-  - id : String
   - type : String
   - status : ExamStatus
   - requestedAt : DateTime
@@ -93,7 +90,7 @@ class Justification {
 }
 
 class DoctorSchedule {
-  - days : Json
+  - days : DisponibilidadeSemanal
 }
 
 class Notification {
@@ -115,8 +112,7 @@ class AuditLog {
 
 class AiConversation {
   - title : String
-  - patientId : String [0..1]
-  - messages : Json
+  - messages : Mensagem [0..*]
   - updatedAt : DateTime
 }
 
@@ -129,10 +125,12 @@ enum Role <<enumeration>> {
 
 enum ConsultationStatus <<enumeration>> {
   AGENDADA
+  CONFIRMADA
   AGUARDANDO
   EM_ANDAMENTO
   CONCLUIDA
   CANCELADA
+  NAO_COMPARECEU
 }
 
 enum TriagePriority <<enumeration>> {
@@ -155,6 +153,13 @@ enum PrescriptionStatus <<enumeration>> {
   EMITIDA
 }
 
+enum PrescriptionSafetyCheck <<enumeration>> {
+  OK
+  ATENCAO
+  PERIGO
+  NAO_VERIFICADA
+}
+
 enum ExamStatus <<enumeration>> {
   SOLICITADO
   EM_ANALISE
@@ -166,29 +171,37 @@ enum Gender <<enumeration>> {
   F
 }
 
+Patient "0..1" -- "0..1" User : conta de acesso >
 Patient "1" -- "0..*" Consultation : tem >
 User "0..1" -- "0..*" Consultation : médico
 Consultation "1" *-- "0..1" VitalSigns
 User "1" -- "0..*" VitalSigns : regista >
-Patient "1" -- "0..*" Prescription
+Patient "1" -- "0..*" Prescription : /receitas
 User "1" -- "0..*" Prescription : prescritor
 Consultation "0..1" -- "0..*" Prescription : origina >
 Prescription "1" *-- "1..*" Medication
 Patient "1" -- "0..*" Exam
+Consultation "0..1" -- "0..*" Exam : pede >
 User "1" -- "0..*" Exam : requisitante
 Consultation "1" *-- "0..*" Justification
-Patient "1" -- "0..*" Justification
+Patient "1" -- "0..*" Justification : /justificativos
 User "1" -- "0..*" Justification : emissor
 User "1" *-- "0..1" DoctorSchedule
 User "0..1" -- "0..*" Notification : destinatário
 User "1" -- "0..*" AuditLog : autor
 User "1" *-- "0..*" AiConversation
+AiConversation "0..*" -- "0..1" Patient : em contexto >
+note bottom of Prescription
+  Validação electrónica: o signatário é sempre
+  o médico autor; signedAt guarda a data/hora.
+end note
 
 Medication -[hidden]down- Role
 Role -[hidden]right- ConsultationStatus
 ConsultationStatus -[hidden]right- TriagePriority
 TriagePriority -[hidden]right- TriagePrioritySource
 TriagePrioritySource -[hidden]right- PrescriptionStatus
-PrescriptionStatus -[hidden]right- ExamStatus
+PrescriptionStatus -[hidden]right- PrescriptionSafetyCheck
+PrescriptionSafetyCheck -[hidden]right- ExamStatus
 ExamStatus -[hidden]right- Gender
 @enduml

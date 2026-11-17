@@ -15,14 +15,15 @@ node "Smartphone / computador do paciente" <<device>> as PD {
   }
 }
 
-node "Servidor de aplicação" <<device>> as SRV {
-  node "Proxy reverso (HTTPS/TLS)" <<executionEnvironment>> as PX {
+node "Servidor virtual (VPS) — configuração recomendada" <<device>> as SRV {
+  node "Firewall\n(só portas 443 e 22 abertas)" <<executionEnvironment>> as FW
+  node "Nginx — proxy reverso\n(TLS, certificado Let's Encrypt)" <<executionEnvironment>> as PX {
     artifact "leevida-front-end/dist" as FEDIST
   }
-  node "Node.js 20" <<executionEnvironment>> as NODE {
+  node "Node.js 22" <<executionEnvironment>> as NODE {
     artifact "leevida-backend\n(API NestJS)" as BE
   }
-  node "PostgreSQL 16" <<executionEnvironment>> as PGN {
+  node "PostgreSQL 16\n(só em localhost)" <<executionEnvironment>> as PGN {
     artifact "leevida_db" as DBA
   }
 }
@@ -31,9 +32,15 @@ node "Google Cloud" <<device>> as GCP {
   node "Gemini API" <<executionEnvironment>> as GEM
 }
 
-WS -- SRV : <<HTTPS>>\nrede local / Internet
-PD -- SRV : <<HTTPS>>\nInternet
-PX -- NODE : <<HTTP>>
-NODE -- PGN : <<TCP/IP>>
-SRV -- GCP : <<HTTPS>>
+WS -- FW : <<HTTPS 443>>\nInternet
+PD -- FW : <<HTTPS 443>>\nInternet
+FW -- PX
+PX -- NODE : <<HTTP localhost:3000>>
+NODE -- PGN : <<TCP localhost:5432>>
+NODE -- GEM : <<HTTPS>>\nsó dados pseudonimizados
+note bottom of SRV
+  Todo o tráfego externo entra pela porta 443 do Nginx;
+  a API e a base de dados não ficam expostas à Internet.
+  A clínica não abre portas na sua rede local.
+end note
 @enduml

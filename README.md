@@ -64,7 +64,7 @@ Modelados em UML 2.5.1 com [PlantUML](https://plantuml.com) e [Graphviz](https:/
 | 8 | Actividades: fluxo de atendimento | [PNG](artefactos/uml/imagens/05-actividades-atendimento.png) | [.puml](artefactos/uml/fontes/05-actividades-atendimento.puml) |
 | 9 | Máquina de estados da consulta | [PNG](artefactos/uml/imagens/06-estados-consulta.png) | [.puml](artefactos/uml/fontes/06-estados-consulta.puml) |
 | 10 | Componentes (arquitectura) | [PNG](artefactos/uml/imagens/07-componentes.png) | [.puml](artefactos/uml/fontes/07-componentes.puml) |
-| 28 | Implantação | [PNG](artefactos/uml/imagens/08-implantacao.png) | [.puml](artefactos/uml/fontes/08-implantacao.puml) |
+| 30 | Implantação | [PNG](artefactos/uml/imagens/08-implantacao.png) | [.puml](artefactos/uml/fontes/08-implantacao.puml) |
 
 ![Diagrama de casos de uso](artefactos/uml/imagens/01-casos-de-uso.png)
 
@@ -88,7 +88,7 @@ Aplicação web de prontuário clínico com quatro perfis (administrador, médic
 | ![Triagem com IA](capturas-de-ecra/fig23-ia-triagem-manchester.png) | ![Verificação da receita](capturas-de-ecra/fig26-ia-verificacao-receita.png) |
 | Sugestão de prioridade de triagem pela IA | Verificação de segurança da receita |
 
-Todas as capturas estão em [`capturas-de-ecra/`](capturas-de-ecra/), com o número da figura correspondente na monografia. Os dados apresentados são fictícios (dados de demonstração).
+Todas as capturas estão em [`capturas-de-ecra/`](capturas-de-ecra/). O número no nome do ficheiro é o da versão 2 da monografia; na versão 3, as figuras a partir da 3 mudaram de número. Os dados apresentados são fictícios (dados de demonstração).
 
 ## Evidências da investigação
 
